@@ -16,9 +16,9 @@ pub enum LexerError {
 impl fmt::Display for LexerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LexerError::UnknownOperator(c) => write!(f, "未知运算符: '{}'", c),
-            LexerError::InvalidNumber(s) => write!(f, "无效数字: '{}'", s),
-            LexerError::UnexpectedChar(c) => write!(f, "意外字符: '{}'", c),
+            LexerError::UnknownOperator(c) => write!(f, "未知运算符: '{c}'"),
+            LexerError::InvalidNumber(s) => write!(f, "无效数字: '{s}'"),
+            LexerError::UnexpectedChar(c) => write!(f, "意外字符: '{c}'"),
         }
     }
 }

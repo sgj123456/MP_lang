@@ -15,10 +15,10 @@ pub enum InterpreterError {
 impl fmt::Display for InterpreterError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            InterpreterError::UndefinedVariable(name) => write!(f, "未定义变量: {}", name),
-            InterpreterError::InvalidOperation(op) => write!(f, "无效操作: {}", op),
-            InterpreterError::TypeMismatch(msg) => write!(f, "类型不匹配: {}", msg),
-            InterpreterError::UnsupportedExpression(expr) => write!(f, "不支持的表达式: {}", expr),
+            InterpreterError::UndefinedVariable(name) => write!(f, "未定义变量: {name}"),
+            InterpreterError::InvalidOperation(op) => write!(f, "无效操作: {op}"),
+            InterpreterError::TypeMismatch(msg) => write!(f, "类型不匹配: {msg}"),
+            InterpreterError::UnsupportedExpression(expr) => write!(f, "不支持的表达式: {expr}"),
         }
     }
 }
@@ -37,6 +37,12 @@ pub enum Value {
 #[derive(Debug, Clone)]
 pub struct Environment {
     values: HashMap<String, Value>,
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Environment {
@@ -144,8 +150,7 @@ fn eval_expr(expr: &Expr, env: &Environment) -> Result<Value, InterpreterError> 
                     Ok(Value::Boolean(l != r))
                 }
                 _ => Err(InterpreterError::InvalidOperation(format!(
-                    "{:?} {:?} {:?}",
-                    left_val, op, right_val
+                    "{left_val:?} {op:?} {right_val:?}"
                 ))),
             }
         }
@@ -160,8 +165,7 @@ fn eval_expr(expr: &Expr, env: &Environment) -> Result<Value, InterpreterError> 
             }
         }
         _ => Err(InterpreterError::UnsupportedExpression(format!(
-            "{:?}",
-            expr
+            "{expr:?}"
         ))),
     }
 }
