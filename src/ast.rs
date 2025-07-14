@@ -26,6 +26,10 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
     },
+    While {
+        condition: Box<Expr>,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]

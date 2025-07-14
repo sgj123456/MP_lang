@@ -5,11 +5,8 @@ mod interpreter;
 mod lexer;
 mod parser;
 
-use std::{
-    env, fs,
-    io::{self, Write},
-    result::Result,
-};
+use rustyline::{Config, Editor, error::ReadlineError, history::FileHistory};
+use std::{env, fs, result::Result};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
@@ -28,57 +25,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("欢迎使用Mp语言! (输入help查看帮助)");
+    let config = Config::builder().auto_add_history(true).build();
+    let mut rl = Editor::<(), FileHistory>::with_config(config)?;
     let mut env = interpreter::Environment::new();
 
     loop {
-        print!(">> ");
-        io::stdout().flush()?;
+        let readline = rl.readline(">> ");
+        match readline {
+            Ok(line) => {
+                let trimmed = line.trim().to_owned();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                rl.add_history_entry(trimmed.as_str())?;
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
+                match trimmed.as_str() {
+                    "exit" => break,
+                    "help" => {
+                        println!("可用命令:");
+                        println!("  exit     - 退出交互模式");
+                        println!("  help     - 显示帮助信息");
+                        println!("  clear    - 清空环境变量");
+                        println!("  其他输入 - 执行Mp代码");
+                        continue;
+                    }
+                    "clear" => {
+                        env = interpreter::Environment::new();
+                        println!("环境已清空");
+                        continue;
+                    }
+                    _ => {}
+                }
 
-        let trimmed = input.trim().to_owned();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        match trimmed.as_str() {
-            "exit" => break,
-            "help" => {
-                println!("可用命令:");
-                println!("  exit     - 退出交互模式");
-                println!("  help     - 显示帮助信息");
-                println!("  clear    - 清空环境变量");
-                println!("  其他输入 - 执行Mp代码");
-                continue;
-            }
-            "clear" => {
-                env = interpreter::Environment::new();
-                println!("环境已清空");
-                continue;
-            }
-            _ => {}
-        }
-
-        // 支持多行输入
-        while trimmed.ends_with('\\') {
-            print!(".. ");
-            io::stdout().flush()?;
-            input.pop(); // 移除末尾的\
-            let mut line = String::new();
-            io::stdin().read_line(&mut line)?;
-            input.push_str(&line);
-        }
-
-        match lexer::tokenize(&input) {
-            Ok(tokens) => {
-                let ast = parser::parse(tokens);
-                match interpreter::eval_with_env(ast, &mut env) {
-                    Ok(result) => println!("=> {result:?}"),
-                    Err(e) => eprintln!("执行错误: {e}"),
+                match lexer::tokenize(&line) {
+                    Ok(tokens) => {
+                        let ast = parser::parse(tokens);
+                        match interpreter::eval_with_env(ast, &mut env) {
+                            Ok(result) => println!("=> {result:?}"),
+                            Err(e) => eprintln!("执行错误: {e}"),
+                        }
+                    }
+                    Err(e) => eprintln!("词法分析错误: {e}"),
                 }
             }
-            Err(e) => eprintln!("词法分析错误: {e}"),
+            Err(ReadlineError::Interrupted) => {
+                println!("使用Ctrl-D退出");
+            }
+            Err(ReadlineError::Eof) => {
+                println!("再见!");
+                break;
+            }
+            Err(err) => {
+                eprintln!("读取错误: {:?}", err);
+                break;
+            }
         }
     }
 

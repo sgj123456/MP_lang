@@ -32,9 +32,28 @@ impl Parser {
             self.let_statement()
         } else if self.match_token(&Token::Keyword("fn".to_string())) {
             self.function_statement()
+        } else if self.match_token(&Token::Keyword("while".to_string())) {
+            self.while_statement()
         } else {
             Stmt::Expr(self.expression())
         }
+    }
+
+    fn while_statement(&mut self) -> Stmt {
+        let condition = self.expression();
+        self.consume(&Token::LeftBrace, "Expect '{' after while condition");
+        let mut body = Vec::new();
+        while !self.check(&Token::RightBrace) && !self.is_at_end() {
+            body.push(self.statement());
+            while self.match_token(&Token::Semicolon) {
+                // 跳过连续的分号
+            }
+        }
+        self.consume(&Token::RightBrace, "Expect '}' after while body");
+        Stmt::Expr(Expr::While {
+            condition: Box::new(condition),
+            body,
+        })
     }
 
     fn let_statement(&mut self) -> Stmt {
@@ -48,8 +67,26 @@ impl Parser {
         if self.match_token(&Token::Keyword("if".to_string())) {
             self.if_expression()
         } else {
-            self.equality()
+            self.assignment()
         }
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+        
+        if self.match_token(&Token::Equal) {
+            let value = self.assignment();
+            if let Expr::Variable(name) = expr {
+                return Expr::BinaryOp {
+                    left: Box::new(Expr::Variable(name)),
+                    op: Token::Equal,
+                    right: Box::new(value),
+                };
+            }
+            panic!("Invalid assignment target");
+        }
+        
+        expr
     }
 
     fn equality(&mut self) -> Expr {

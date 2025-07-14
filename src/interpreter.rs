@@ -85,7 +85,7 @@ impl Environment {
         }
     }
 }
-
+#[cfg(test)]
 pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
     let mut env = Environment::new();
     eval_with_env(ast, &mut env)
@@ -126,6 +126,18 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
         Expr::BinaryOp { left, op, right } => {
+            if let Token::Equal = op {
+                if let Expr::Variable(name) = left.as_ref() {
+                    let right_value = eval_expr(right, env)?;
+                    env.define(name.clone(), right_value.clone());
+                    return Ok(right_value);
+                } else {
+                    return Err(InterpreterError::InvalidOperation(
+                        "Invalid assignment target".to_string(),
+                    ));
+                }
+            }
+
             let left_value = eval_expr(left, env)?;
             let right_value = eval_expr(right, env)?;
 
@@ -205,6 +217,26 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             let mut result = Value::Nil;
             for stmt in statements {
                 result = eval_stmt(stmt, &mut block_env)?;
+            }
+            Ok(result)
+        }
+        Expr::While { condition, body } => {
+            let mut result = Value::Nil;
+            loop {
+                let condition_value = eval_expr(condition, env)?;
+                if let Value::Boolean(b) = condition_value {
+                    if !b {
+                        break;
+                    }
+                } else {
+                    return Err(InterpreterError::TypeMismatch(
+                        "While condition must be boolean".to_string(),
+                    ));
+                }
+
+                for stmt in body {
+                    result = eval_stmt(stmt, env)?;
+                }
             }
             Ok(result)
         }
@@ -301,5 +333,39 @@ mod tests {
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(2.0));
+    }
+
+    #[test]
+    fn test_while_loop() {
+        let tokens = tokenize("{ let x = 0; while x < 3 { x = x + 1 } }").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(3.0));
+    }
+
+    #[test]
+    fn test_while_with_condition_false() {
+        let tokens = tokenize("while false { 1 }").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Nil);
+    }
+
+    #[test]
+    fn test_nested_while_loops() {
+        let tokens = tokenize("{
+            let x = 0;
+            let y = 0;
+            while x < 2 {
+                x = x + 1;
+                while y < 3 {
+                    y = y + 1
+                }
+            }
+            y
+        }").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(3.0));
     }
 }

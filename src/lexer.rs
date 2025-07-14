@@ -200,7 +200,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 }
                 // 简单关键字识别
                 match ident.as_str() {
-                    "let" | "fn" | "if" | "else" => {
+                    "let" | "fn" | "if" | "else" | "while" => {
                         tokens.push(Token::Keyword(ident));
                     }
                     "true" => {
