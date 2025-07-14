@@ -18,35 +18,49 @@ impl Parser {
         while !self.is_at_end() {
             let stmt = self.statement();
             statements.push(stmt);
-
-            // 处理分号分隔符
-            while self.match_token(&Token::Semicolon) {
-                // 跳过连续的分号
-            }
         }
         statements
     }
 
     fn statement(&mut self) -> Stmt {
-        if self.match_token(&Token::Let) {
+        while self.match_token(&Token::Semicolon) || self.match_token(&Token::Newline) {}
+        let stmt = if self.match_token(&Token::Let) {
             self.let_statement()
         } else if self.match_token(&Token::Fn) {
             self.function_statement()
         } else {
-            Stmt::Expr(self.expression())
+            let expr = self.expression();
+            if !self.check(&Token::Semicolon) && self.check(&Token::RightBrace) {
+                Stmt::Result(expr)
+            } else {
+                Stmt::Expr(expr)
+            }
+        };
+        if !self.is_at_end()
+            && !self.is_at_block_end()
+            && !self.check(&Token::Semicolon)
+            && !self.check(&Token::Newline)
+        {
+            panic!("Expect ';' or newline after expression");
         }
+        while self.match_token(&Token::Semicolon) || self.match_token(&Token::Newline) {}
+        stmt
     }
 
     fn while_expression(&mut self) -> Expr {
         let condition = self.expression();
         self.consume(&Token::LeftBrace, "Expect '{' after while condition");
+
         let mut body = Vec::new();
-        while !self.check(&Token::RightBrace) && !self.is_at_end() {
-            body.push(self.statement());
-            while self.match_token(&Token::Semicolon) {
-                // 跳过连续的分号
+        loop {
+            if self.check(&Token::RightBrace) || self.is_at_end() {
+                break;
             }
+
+            // 解析语句并添加到循环体
+            body.push(self.statement());
         }
+
         self.consume(&Token::RightBrace, "Expect '}' after while body");
         Expr::While {
             condition: Box::new(condition),
@@ -62,13 +76,14 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        if self.match_token(&Token::If) {
+        let expr = if self.match_token(&Token::If) {
             self.if_expression()
         } else if self.match_token(&Token::While) {
             self.while_expression()
         } else {
             self.assignment()
-        }
+        };
+        expr
     }
 
     fn assignment(&mut self) -> Expr {
@@ -222,11 +237,6 @@ impl Parser {
             let mut statements = Vec::new();
             while !self.check(&Token::RightBrace) && !self.is_at_end() {
                 statements.push(self.statement());
-
-                // 处理分号分隔符
-                while self.match_token(&Token::Semicolon) {
-                    // 跳过连续的分号
-                }
             }
             self.consume(&Token::RightBrace, "Expect '}' after block");
             return Expr::Block(statements);
@@ -266,6 +276,10 @@ impl Parser {
 
     fn is_at_end(&self) -> bool {
         self.current >= self.tokens.len() || self.tokens[self.current] == Token::Eof
+    }
+
+    fn is_at_block_end(&self) -> bool {
+        self.check(&Token::RightBrace)
     }
 
     fn previous(&self) -> &Token {
@@ -376,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_if_expr() {
-        let tokens = tokenize("if 1 < 2 3 else 4").unwrap();
+        let tokens = tokenize("if 1 < 2 {3}; else {4};").unwrap();
         let ast = parse(tokens);
         assert_eq!(
             ast,
@@ -386,8 +400,12 @@ mod tests {
                     op: Token::LessThan,
                     right: Box::new(Expr::Number(2.0))
                 }),
-                then_branch: vec![Stmt::Expr(Expr::Number(3.0))],
-                else_branch: Some(vec![Stmt::Expr(Expr::Number(4.0))])
+                then_branch: vec![Stmt::Expr(Expr::Block(vec![Stmt::Result(Expr::Number(
+                    3.0
+                ))]))],
+                else_branch: Some(vec![Stmt::Expr(Expr::Block(vec![Stmt::Result(
+                    Expr::Number(4.0)
+                )]))])
             })]
         );
     }
@@ -419,7 +437,7 @@ mod tests {
             vec![Stmt::Function {
                 name: "add".to_string(),
                 params: vec!["a".to_string(), "b".to_string()],
-                body: vec![Stmt::Expr(Expr::BinaryOp {
+                body: vec![Stmt::Result(Expr::BinaryOp {
                     left: Box::new(Expr::Variable("a".to_string())),
                     op: Token::Plus,
                     right: Box::new(Expr::Variable("b".to_string()))

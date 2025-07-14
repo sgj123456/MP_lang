@@ -49,6 +49,7 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Semicolon,
+    Newline,
     Identifier(String),
     Let,
     Fn,
@@ -65,8 +66,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
 
     while let Some(&c) = chars.peek() {
         match c {
-            ' ' | '\t' | '\n' | '\r' => {
+            ' ' | '\t' | '\r' => {
                 chars.next(); // 跳过空白字符
+            }
+            '\n' => {
+                tokens.push(Token::Newline);
+                chars.next();
             }
             '+' => {
                 tokens.push(Token::Plus);
@@ -84,12 +89,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 chars.next();
                 match chars.peek() {
                     Some('/') => {
-                        // 单行注释，跳过直到行尾
+                        // 单行注释，跳过直到行尾(包括换行符)
                         while let Some(&c) = chars.peek() {
+                            chars.next();
                             if c == '\n' {
                                 break;
                             }
-                            chars.next();
                         }
                     }
                     Some('*') => {

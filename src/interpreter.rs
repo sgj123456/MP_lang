@@ -225,6 +225,7 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
             env.define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
+        Stmt::Result(expr) | Stmt::Return(expr) => eval_expr(expr, env),
     }
 }
 
@@ -374,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_number_eval() {
-        let tokens = tokenize("123").unwrap();
+        let tokens = tokenize("123;").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(123.0));
@@ -382,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_binary_op_eval() {
-        let tokens = tokenize("1 + 2 * 3").unwrap();
+        let tokens = tokenize("1 + 2 * 3;").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(7.0));
@@ -393,7 +394,7 @@ mod tests {
         let mut env = Environment::new();
         env.define("x".to_string(), Value::Number(5.0));
 
-        let tokens = tokenize("x + 3").unwrap();
+        let tokens = tokenize("x + 3;").unwrap();
         let ast = parse(tokens);
         let result = eval_with_env(ast, &mut env).unwrap();
         assert_eq!(result, Value::Number(8.0));
@@ -401,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_if_expr_eval() {
-        let tokens = tokenize("if 1 < 2 3 else 4").unwrap();
+        let tokens = tokenize("if 1 < 2 {3}; else {4};").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(3.0));
@@ -409,21 +410,21 @@ mod tests {
 
     #[test]
     fn test_undefined_variable() {
-        let tokens = tokenize("x").unwrap();
+        let tokens = tokenize("x;").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
     }
 
     #[test]
     fn test_invalid_operation() {
-        let tokens = tokenize("true + 1").unwrap();
+        let tokens = tokenize("true + 1;").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
     }
 
     #[test]
     fn test_type_mismatch() {
-        let tokens = tokenize("if 1 + true 2 else 3").unwrap();
+        let tokens = tokenize("if 1 + true {2}; else {3};").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
     }
@@ -475,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_while_with_condition_false() {
-        let tokens = tokenize("while false { 1 }").unwrap();
+        let tokens = tokenize("while false { 1 };").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Nil);
@@ -490,11 +491,11 @@ mod tests {
             while x < 2 {
                 x = x + 1;
                 while y < 3 {
-                    y = y + 1
-                }
-            }
+                    y = y + 1;
+                };
+            };
             y
-        }",
+        };",
         )
         .unwrap();
         let ast = parse(tokens);
