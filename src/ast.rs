@@ -7,6 +7,12 @@ pub enum Expr {
     Number(f64),
     Boolean(bool),
     Variable(String),
+    If {
+        condition: Box<Expr>,
+        then_branch: Vec<Stmt>,
+        else_branch: Option<Vec<Stmt>>,
+    },
+    Block(Vec<Stmt>),
     BinaryOp {
         left: Box<Expr>,
         op: Token,
@@ -33,10 +39,5 @@ pub enum Stmt {
         name: String,
         params: Vec<String>,
         body: Vec<Stmt>,
-    },
-    If {
-        condition: Expr,
-        then_branch: Vec<Stmt>,
-        else_branch: Option<Vec<Stmt>>,
     },
 }

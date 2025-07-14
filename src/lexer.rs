@@ -27,6 +27,9 @@ impl fmt::Display for LexerError {
 pub enum Token {
     Number(f64),
     Boolean(bool),
+    String(String),
+    Comment(String),
+    Comma,
     Plus,
     Minus,
     Multiply,
@@ -34,6 +37,11 @@ pub enum Token {
     Equal,
     LeftParen,
     RightParen,
+    LeftBracket,
+    RightBracket,
+    LeftBrace,
+    RightBrace,
+    Semicolon,
     Identifier(String),
     Keyword(String),
     Eof,
@@ -61,8 +69,49 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 chars.next();
             }
             '/' => {
-                tokens.push(Token::Divide);
                 chars.next();
+                match chars.peek() {
+                    Some('/') => {
+                        // 单行注释，跳过直到行尾
+                        while let Some(&c) = chars.peek() {
+                            if c == '\n' {
+                                break;
+                            }
+                            chars.next();
+                        }
+                    }
+                    Some('*') => {
+                        // 多行注释
+                        chars.next(); // 跳过*
+                        let mut comment = String::new();
+                        let mut closed = false;
+
+                        while let Some(&c) = chars.peek() {
+                            if c == '*' {
+                                chars.next();
+                                if let Some(&'/') = chars.peek() {
+                                    closed = true;
+                                    chars.next();
+                                    break;
+                                } else {
+                                    comment.push('*');
+                                }
+                            } else {
+                                comment.push(c);
+                                chars.next();
+                            }
+                        }
+
+                        if !closed {
+                            return Err(LexerError::UnexpectedChar('*'));
+                        }
+
+                        tokens.push(Token::Comment(comment));
+                    }
+                    _ => {
+                        tokens.push(Token::Divide);
+                    }
+                }
             }
             '=' => {
                 chars.next();
@@ -108,6 +157,22 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 tokens.push(Token::RightParen);
                 chars.next();
             }
+            ',' => {
+                tokens.push(Token::Comma);
+                chars.next();
+            }
+            '{' => {
+                tokens.push(Token::LeftBrace);
+                chars.next();
+            }
+            '}' => {
+                tokens.push(Token::RightBrace);
+                chars.next();
+            }
+            ';' => {
+                tokens.push(Token::Semicolon);
+                chars.next();
+            }
             '0'..='9' => {
                 let mut num = String::new();
                 while let Some(&c) = chars.peek() {
@@ -135,7 +200,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 }
                 // 简单关键字识别
                 match ident.as_str() {
-                    "let" | "fn" | "if" | "else" | "then" => {
+                    "let" | "fn" | "if" | "else" => {
                         tokens.push(Token::Keyword(ident));
                     }
                     "true" => {
@@ -148,6 +213,43 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                         tokens.push(Token::Identifier(ident));
                     }
                 }
+            }
+            '"' => {
+                chars.next(); // 跳过开始引号
+                let mut s = String::new();
+                let mut escaped = false;
+                let mut closed = false;
+
+                while let Some(&c) = chars.peek() {
+                    if escaped {
+                        match c {
+                            'n' => s.push('\n'),
+                            't' => s.push('\t'),
+                            'r' => s.push('\r'),
+                            '"' => s.push('"'),
+                            '\\' => s.push('\\'),
+                            _ => return Err(LexerError::UnexpectedChar(c)),
+                        }
+                        escaped = false;
+                        chars.next();
+                    } else if c == '\\' {
+                        escaped = true;
+                        chars.next();
+                    } else if c == '"' {
+                        closed = true;
+                        chars.next();
+                        break;
+                    } else {
+                        s.push(c);
+                        chars.next();
+                    }
+                }
+
+                if !closed {
+                    return Err(LexerError::UnexpectedChar('"'));
+                }
+
+                tokens.push(Token::String(s));
             }
             _ => {
                 return Err(LexerError::UnexpectedChar(c));
@@ -198,13 +300,12 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let tokens = tokenize("let if then else").unwrap();
+        let tokens = tokenize("let if else").unwrap();
         assert_eq!(
             tokens,
             vec![
                 Token::Keyword("let".to_string()),
                 Token::Keyword("if".to_string()),
-                Token::Keyword("then".to_string()),
                 Token::Keyword("else".to_string()),
                 Token::Eof
             ]
@@ -222,5 +323,68 @@ mod tests {
                 Token::Eof
             ]
         );
+    }
+
+    #[test]
+    fn test_strings() {
+        let tokens = tokenize("\"hello\" \"world\\n\" \"say \\\"hi\\\"\"").unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::String("hello".to_string()),
+                Token::String("world\n".to_string()),
+                Token::String("say \"hi\"".to_string()),
+                Token::Eof
+            ]
+        );
+
+        // 测试未闭合的字符串
+        assert!(tokenize("\"unclosed").is_err());
+    }
+
+    #[test]
+    fn test_comments() {
+        // 测试单行注释
+        let tokens = tokenize("// 这是一个注释\n123").unwrap();
+        assert_eq!(tokens, vec![Token::Number(123.0), Token::Eof]);
+
+        // 测试注释后的代码
+        let tokens = tokenize("123 // 数字\n+ 456").unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Number(123.0),
+                Token::Plus,
+                Token::Number(456.0),
+                Token::Eof
+            ]
+        );
+
+        // 测试多行注释
+        let tokens = tokenize("123 /* 多行\n注释 */ 456").unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Number(123.0),
+                Token::Comment(" 多行\n注释 ".to_string()),
+                Token::Number(456.0),
+                Token::Eof
+            ]
+        );
+
+        // 测试多行注释中的代码
+        let tokens = tokenize("123 /* let x = 5 */ 456").unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Number(123.0),
+                Token::Comment(" let x = 5 ".to_string()),
+                Token::Number(456.0),
+                Token::Eof
+            ]
+        );
+
+        // 测试未闭合的多行注释
+        assert!(tokenize("123 /* 未闭合注释").is_err());
     }
 }

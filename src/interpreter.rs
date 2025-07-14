@@ -1,5 +1,3 @@
-// 解释器
-
 use std::{collections::HashMap, error::Error, fmt};
 
 impl Error for InterpreterError {}
@@ -32,11 +30,21 @@ use crate::{
 pub enum Value {
     Number(f64),
     Boolean(bool),
+    Nil,
+}
+
+#[derive(Debug, Clone)]
+pub enum EnvironmentValue {
+    Variable(Value),
+    Function {
+        params: Vec<String>,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    values: HashMap<String, Value>,
+    values: HashMap<String, EnvironmentValue>,
 }
 
 impl Default for Environment {
@@ -53,11 +61,28 @@ impl Environment {
     }
 
     pub fn define(&mut self, name: String, value: Value) {
-        self.values.insert(name, value);
+        self.values.insert(name, EnvironmentValue::Variable(value));
+    }
+
+    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Vec<Stmt>) {
+        self.values
+            .insert(name, EnvironmentValue::Function { params, body });
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
-        self.values.get(name).cloned()
+        match self.values.get(name) {
+            Some(EnvironmentValue::Variable(value)) => Some(value.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn get_function(&self, name: &str) -> Option<(Vec<String>, Vec<Stmt>)> {
+        match self.values.get(name) {
+            Some(EnvironmentValue::Function { params, body }) => {
+                Some((params.clone(), body.clone()))
+            }
+            _ => None,
+        }
     }
 }
 
@@ -67,7 +92,7 @@ pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
 }
 
 pub fn eval_with_env(ast: Vec<Stmt>, env: &mut Environment) -> Result<Value, InterpreterError> {
-    let mut result = Value::Number(0.0);
+    let mut result = Value::Nil;
 
     for stmt in ast {
         result = eval_stmt(&stmt, env)?;
@@ -80,93 +105,110 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
     match stmt {
         Stmt::Expr(expr) => eval_expr(expr, env),
         Stmt::Let { name, value } => {
-            let val = eval_expr(value, env)?;
-            env.define(name.clone(), val.clone());
-            Ok(val)
+            let value = eval_expr(value, env)?;
+            env.define(name.clone(), value);
+            Ok(Value::Nil)
         }
-        Stmt::If {
-            condition,
-            then_branch,
-            else_branch,
-        } => {
-            let cond = eval_expr(condition, env)?;
-            match cond {
-                Value::Boolean(true) => eval_with_env((*then_branch).clone(), env),
-                Value::Boolean(false) => {
-                    if let Some(else_branch) = else_branch.clone() {
-                        eval_with_env((else_branch).clone(), env)
-                    } else {
-                        Ok(Value::Number(0.0))
-                    }
-                }
-                _ => Err(InterpreterError::TypeMismatch(
-                    "Condition must evaluate to boolean".to_string(),
-                )),
-            }
+        Stmt::Function { name, params, body } => {
+            env.define_function(name.clone(), params.clone(), body.clone());
+            Ok(Value::Nil)
         }
-        _ => Ok(Value::Number(0.0)), // 暂时不支持其他语句
+        _ => Ok(Value::Nil), // 其他不支持语句
     }
 }
 
-fn eval_expr(expr: &Expr, env: &Environment) -> Result<Value, InterpreterError> {
+fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterError> {
     match expr {
         Expr::Number(n) => Ok(Value::Number(*n)),
         Expr::Boolean(b) => Ok(Value::Boolean(*b)),
         Expr::Variable(name) => match env.get(name.as_str()) {
-            Some(value) => Ok(value.clone()),
+            Some(value) => Ok(value),
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
         Expr::BinaryOp { left, op, right } => {
-            let left_val = eval_expr(left, env)?;
-            let right_val = eval_expr(right, env)?;
+            let left_value = eval_expr(left, env)?;
+            let right_value = eval_expr(right, env)?;
 
-            match (left_val.clone(), op.clone(), right_val.clone()) {
-                (Value::Number(l), Token::Plus, Value::Number(r)) => Ok(Value::Number(l + r)),
-                (Value::Number(l), Token::Minus, Value::Number(r)) => Ok(Value::Number(l - r)),
-                (Value::Number(l), Token::Multiply, Value::Number(r)) => Ok(Value::Number(l * r)),
-                (Value::Number(l), Token::Divide, Value::Number(r)) => Ok(Value::Number(l / r)),
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == "==" => {
-                    Ok(Value::Boolean(l == r))
-                }
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == "!=" => {
-                    Ok(Value::Boolean(l != r))
-                }
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == ">" => {
-                    Ok(Value::Boolean(l > r))
-                }
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == ">=" => {
-                    Ok(Value::Boolean(l >= r))
-                }
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == "<" => {
-                    Ok(Value::Boolean(l < r))
-                }
-                (Value::Number(l), Token::Keyword(k), Value::Number(r)) if k == "<=" => {
-                    Ok(Value::Boolean(l <= r))
-                }
-                (Value::Boolean(l), Token::Keyword(k), Value::Boolean(r)) if k == "==" => {
-                    Ok(Value::Boolean(l == r))
-                }
-                (Value::Boolean(l), Token::Keyword(k), Value::Boolean(r)) if k == "!=" => {
-                    Ok(Value::Boolean(l != r))
-                }
-                _ => Err(InterpreterError::InvalidOperation(format!(
-                    "{left_val:?} {op:?} {right_val:?}"
-                ))),
+            match (left_value, right_value) {
+                (Value::Number(l), Value::Number(r)) => match op {
+                    Token::Plus => Ok(Value::Number(l + r)),
+                    Token::Minus => Ok(Value::Number(l - r)),
+                    Token::Multiply => Ok(Value::Number(l * r)),
+                    Token::Divide => Ok(Value::Number(l / r)),
+                    Token::Keyword(op) if op == ">" => Ok(Value::Boolean(l > r)),
+                    Token::Keyword(op) if op == ">=" => Ok(Value::Boolean(l >= r)),
+                    Token::Keyword(op) if op == "<" => Ok(Value::Boolean(l < r)),
+                    Token::Keyword(op) if op == "<=" => Ok(Value::Boolean(l <= r)),
+                    Token::Keyword(op) if op == "==" => Ok(Value::Boolean(l == r)),
+                    Token::Keyword(op) if op == "!=" => Ok(Value::Boolean(l != r)),
+                    _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
+                },
+                (Value::Boolean(l), Value::Boolean(r)) => match op {
+                    Token::Keyword(op) if op == "==" => Ok(Value::Boolean(l == r)),
+                    Token::Keyword(op) if op == "!=" => Ok(Value::Boolean(l != r)),
+                    _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
+                },
+                _ => Err(InterpreterError::TypeMismatch(
+                    "操作数类型不匹配".to_string(),
+                )),
             }
         }
         Expr::UnaryOp { op, expr } => {
-            let val = eval_expr(expr, env)?;
-            match (op, val) {
+            let value = eval_expr(expr, env)?;
+            match (op, value) {
                 (Token::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
-                _ => Err(InterpreterError::InvalidOperation(format!(
-                    "{:?} {}",
-                    op, "on non-number value"
-                ))),
+                _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
         }
-        _ => Err(InterpreterError::UnsupportedExpression(format!(
-            "{expr:?}"
-        ))),
+        Expr::FunctionCall { name, args } => {
+            let (params, body) = match env.get_function(name.as_str()) {
+                Some(func) => func,
+                None => return Err(InterpreterError::UndefinedVariable(name.clone())),
+            };
+
+            if params.len() != args.len() {
+                return Err(InterpreterError::InvalidOperation(
+                    "参数数量不匹配".to_string(),
+                ));
+            }
+
+            let mut call_env = env.clone();
+            for (param, arg) in params.iter().zip(args.iter()) {
+                let value = eval_expr(arg, env)?;
+                call_env.define(param.clone(), value);
+            }
+
+            eval_with_env(body, &mut call_env)
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let condition_value = eval_expr(condition, env)?;
+            if let Value::Boolean(b) = condition_value {
+                if b {
+                    eval_with_env(then_branch.clone(), env)
+                } else if let Some(else_branch) = else_branch {
+                    eval_with_env(else_branch.clone(), env)
+                } else {
+                    Ok(Value::Nil)
+                }
+            } else {
+                Err(InterpreterError::TypeMismatch(
+                    "If condition must be boolean".to_string(),
+                ))
+            }
+        }
+        Expr::Block(statements) => {
+            let mut block_env = env.clone(); // 创建新的作用域
+            let mut result = Value::Nil;
+            for stmt in statements {
+                result = eval_stmt(stmt, &mut block_env)?;
+            }
+            Ok(result)
+        }
+        _ => Err(InterpreterError::UnsupportedExpression(format!("{expr:?}"))),
     }
 }
 
@@ -204,7 +246,7 @@ mod tests {
 
     #[test]
     fn test_if_expr_eval() {
-        let tokens = tokenize("if 1 < 2 then 3 else 4").unwrap();
+        let tokens = tokenize("if 1 < 2 3 else 4").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(3.0));
@@ -226,7 +268,7 @@ mod tests {
 
     #[test]
     fn test_type_mismatch() {
-        let tokens = tokenize("if 1 then 2 else 3").unwrap();
+        let tokens = tokenize("if 1 + true 2 else 3").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
     }
@@ -240,10 +282,24 @@ mod tests {
 
     #[test]
     fn test_unsupported_expression() {
-        // 假设我们有不支持的表达式类型
-        // 这里需要根据实际AST结构调整测试
         let tokens = tokenize("unsupported").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
+    }
+
+    #[test]
+    fn test_block_expr_eval() {
+        let tokens = tokenize("{ let x = 1; x + 2 }").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(3.0));
+    }
+
+    #[test]
+    fn test_nested_block_scope() {
+        let tokens = tokenize("{ let x = 1; { let x = 2; x } }").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(2.0));
     }
 }

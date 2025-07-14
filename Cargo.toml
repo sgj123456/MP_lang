@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "Mp_lang"
+name = "mp_lang"
 path = "src/lib.rs"
 
 [[bin]]
-name = "Mp"
+name = "mp"
 path = "src/main.rs"
 
 [dependencies]

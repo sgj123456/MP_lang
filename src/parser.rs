@@ -16,7 +16,13 @@ impl Parser {
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statements = Vec::new();
         while !self.is_at_end() {
-            statements.push(self.statement());
+            let stmt = self.statement();
+            statements.push(stmt);
+            
+            // 处理分号分隔符
+            while self.match_token(&Token::Semicolon) {
+                // 跳过连续的分号
+            }
         }
         statements
     }
@@ -24,8 +30,8 @@ impl Parser {
     fn statement(&mut self) -> Stmt {
         if self.match_token(&Token::Keyword("let".to_string())) {
             self.let_statement()
-        } else if self.match_token(&Token::Keyword("if".to_string())) {
-            self.if_statement()
+        } else if self.match_token(&Token::Keyword("fn".to_string())) {
+            self.function_statement()
         } else {
             Stmt::Expr(self.expression())
         }
@@ -39,7 +45,11 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        if self.match_token(&Token::Keyword("if".to_string())) {
+            self.if_expression()
+        } else {
+            self.equality()
+        }
     }
 
     fn equality(&mut self) -> Expr {
@@ -126,6 +136,26 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Expr {
+        if let Token::Identifier(name) = &self.tokens[self.current] {
+            let name = name.clone();
+            self.advance();
+
+            if self.match_token(&Token::LeftParen) {
+                let mut args = Vec::new();
+                if !self.match_token(&Token::RightParen) {
+                    loop {
+                        args.push(self.expression());
+                        if !self.match_token(&Token::Comma) {
+                            break;
+                        }
+                    }
+                    self.consume(&Token::RightParen, "Expect ')' after arguments");
+                }
+                return Expr::FunctionCall { name, args };
+            }
+            return Expr::Variable(name);
+        }
+
         if !self.is_at_end() {
             match &self.tokens[self.current] {
                 Token::Number(n) => {
@@ -153,7 +183,26 @@ impl Parser {
             return expr;
         }
 
-        panic!("Expect expression");
+        if self.match_token(&Token::LeftBrace) {
+            let mut statements = Vec::new();
+            while !self.check(&Token::RightBrace) && !self.is_at_end() {
+                statements.push(self.statement());
+                
+                // 处理分号分隔符
+                while self.match_token(&Token::Semicolon) {
+                    // 跳过连续的分号
+                }
+            }
+            self.consume(&Token::RightBrace, "Expect '}' after block");
+            return Expr::Block(statements);
+        }
+
+        let current_token = if self.is_at_end() {
+            "end of input".to_string()
+        } else {
+            format!("{:?}", self.tokens[self.current])
+        };
+        panic!("Expect expression, found {current_token}");
     }
 
     fn match_token(&mut self, token: &Token) -> bool {
@@ -196,12 +245,8 @@ impl Parser {
         }
     }
 
-    fn if_statement(&mut self) -> Stmt {
-        let condition = self.expression();
-        self.consume(
-            &Token::Keyword("then".to_string()),
-            "Expect 'then' after if condition",
-        );
+    fn if_expression(&mut self) -> Expr {
+        let condition = Box::new(self.expression());
         let then_branch = vec![self.statement()];
 
         let else_branch = if self.match_token(&Token::Keyword("else".to_string())) {
@@ -210,11 +255,35 @@ impl Parser {
             None
         };
 
-        Stmt::If {
+        Expr::If {
             condition,
             then_branch,
             else_branch,
         }
+    }
+
+    fn function_statement(&mut self) -> Stmt {
+        let name = self.consume_identifier();
+        self.consume(&Token::LeftParen, "Expect '(' after function name");
+
+        let mut params = Vec::new();
+        if !self.match_token(&Token::RightParen) {
+            loop {
+                params.push(self.consume_identifier());
+                if !self.match_token(&Token::Comma) {
+                    break;
+                }
+            }
+            self.consume(&Token::RightParen, "Expect ')' after parameters");
+        }
+
+        self.consume(&Token::LeftBrace, "Expect '{' before function body");
+        let mut body = Vec::new();
+        while !self.match_token(&Token::RightBrace) && !self.is_at_end() {
+            body.push(self.statement());
+        }
+
+        Stmt::Function { name, params, body }
     }
 
     fn consume_identifier(&mut self) -> String {
@@ -272,19 +341,19 @@ mod tests {
 
     #[test]
     fn test_if_expr() {
-        let tokens = tokenize("if 1 < 2 then 3 else 4").unwrap();
+        let tokens = tokenize("if 1 < 2 3 else 4").unwrap();
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::If {
-                condition: Expr::BinaryOp {
+            vec![Stmt::Expr(Expr::If {
+                condition: Box::new(Expr::BinaryOp {
                     left: Box::new(Expr::Number(1.0)),
                     op: Token::Keyword("<".to_string()),
                     right: Box::new(Expr::Number(2.0))
-                },
+                }),
                 then_branch: vec![Stmt::Expr(Expr::Number(3.0))],
                 else_branch: Some(vec![Stmt::Expr(Expr::Number(4.0))])
-            }]
+            })]
         );
     }
 
@@ -303,6 +372,115 @@ mod tests {
                     right: Box::new(Expr::Number(3.0))
                 })
             })]
+        );
+    }
+
+    #[test]
+    fn test_function_decl() {
+        let tokens = tokenize("fn add(a, b) { a + b }").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![Stmt::Function {
+                name: "add".to_string(),
+                params: vec!["a".to_string(), "b".to_string()],
+                body: vec![Stmt::Expr(Expr::BinaryOp {
+                    left: Box::new(Expr::Variable("a".to_string())),
+                    op: Token::Plus,
+                    right: Box::new(Expr::Variable("b".to_string()))
+                })]
+            }]
+        );
+    }
+
+    #[test]
+    fn test_function_call() {
+        let tokens = tokenize("add(1, 2)").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![Stmt::Expr(Expr::FunctionCall {
+                name: "add".to_string(),
+                args: vec![Expr::Number(1.0), Expr::Number(2.0)]
+            })]
+        );
+    }
+
+    #[test]
+    fn test_nested_function_call() {
+        let tokens = tokenize("add(1, mul(2, 3))").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![Stmt::Expr(Expr::FunctionCall {
+                name: "add".to_string(),
+                args: vec![
+                    Expr::Number(1.0),
+                    Expr::FunctionCall {
+                        name: "mul".to_string(),
+                        args: vec![Expr::Number(2.0), Expr::Number(3.0)]
+                    }
+                ]
+            })]
+        );
+    }
+
+    #[test]
+    fn test_semicolon_separator() {
+        let tokens = tokenize("let x = 1; let y = 2").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![
+                Stmt::Let {
+                    name: "x".to_string(),
+                    value: Expr::Number(1.0)
+                },
+                Stmt::Let {
+                    name: "y".to_string(),
+                    value: Expr::Number(2.0)
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn test_multiple_semicolons() {
+        let tokens = tokenize("let x = 1;;; let y = 2").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![
+                Stmt::Let {
+                    name: "x".to_string(),
+                    value: Expr::Number(1.0)
+                },
+                Stmt::Let {
+                    name: "y".to_string(),
+                    value: Expr::Number(2.0)
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn test_semicolon_after_expr() {
+        let tokens = tokenize("1 + 2; 3 * 4").unwrap();
+        let ast = parse(tokens);
+        assert_eq!(
+            ast,
+            vec![
+                Stmt::Expr(Expr::BinaryOp {
+                    left: Box::new(Expr::Number(1.0)),
+                    op: Token::Plus,
+                    right: Box::new(Expr::Number(2.0))
+                }),
+                Stmt::Expr(Expr::BinaryOp {
+                    left: Box::new(Expr::Number(3.0)),
+                    op: Token::Multiply,
+                    right: Box::new(Expr::Number(4.0))
+                })
+            ]
         );
     }
 }

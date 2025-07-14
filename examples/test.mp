@@ -1,7 +1,9 @@
-let a = 10
-let b = 20
-let c = a + b + 10
-if c > 30 then
-    a
-else
-    b
+let a = 10;let b = 20
+fn add(x, y) {
+    x + y
+}
+let c = add(a, b)
+if (c > 30) 
+    {c}
+else 
+    {b}
