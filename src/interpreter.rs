@@ -30,7 +30,91 @@ use crate::{
 pub enum Value {
     Number(f64),
     Boolean(bool),
+    Vector(Vec<Value>),
     Nil,
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Value::Number(n) => write!(f, "{n}"),
+            Value::Boolean(b) => write!(f, "{b}"),
+            Value::Nil => write!(f, "nil"),
+            Value::Vector(v) => {
+                write!(f, "[")?;
+                for (i, item) in v.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{item}")?;
+                }
+                write!(f, "]")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum BuiltinFunction {
+    Print,
+    Len,
+    ToString,
+    Vector,
+    Push,
+    Pop,
+}
+
+impl BuiltinFunction {
+    fn call(&self, args: Vec<Value>) -> Result<Value, InterpreterError> {
+        match self {
+            BuiltinFunction::Print => {
+                for arg in args {
+                    print!("{arg} ");
+                }
+                println!();
+                Ok(Value::Nil)
+            }
+            BuiltinFunction::Len => match args.first() {
+                Some(Value::Number(n)) => Ok(Value::Number(n.abs())),
+                Some(Value::Boolean(b)) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
+                Some(Value::Nil) => Ok(Value::Number(0.0)),
+                Some(Value::Vector(v)) => Ok(Value::Number(v.len() as f64)),
+                _ => Err(InterpreterError::TypeMismatch(
+                    "len() expects a number, boolean, nil or vector".to_string(),
+                )),
+            },
+            BuiltinFunction::ToString => match args.first() {
+                Some(value) => Ok(Value::Number(value.to_string().len() as f64)),
+                None => Err(InterpreterError::TypeMismatch(
+                    "toString() expects one argument".to_string(),
+                )),
+            },
+            BuiltinFunction::Vector => Ok(Value::Vector(args)),
+            BuiltinFunction::Push => match args.as_slice() {
+                [Value::Vector(v), item] => {
+                    let mut new_vec = v.clone();
+                    new_vec.push(item.clone());
+                    Ok(Value::Vector(new_vec))
+                }
+                _ => Err(InterpreterError::TypeMismatch(
+                    "push() expects a vector and an item".to_string(),
+                )),
+            },
+            BuiltinFunction::Pop => match args.first() {
+                Some(Value::Vector(v)) if !v.is_empty() => {
+                    let mut new_vec = v.clone();
+                    let popped = new_vec.pop().unwrap();
+                    Ok(popped)
+                }
+                Some(Value::Vector(_)) => Err(InterpreterError::InvalidOperation(
+                    "Cannot pop from empty vector".to_string(),
+                )),
+                _ => Err(InterpreterError::TypeMismatch(
+                    "pop() expects a vector".to_string(),
+                )),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +124,7 @@ pub enum EnvironmentValue {
         params: Vec<String>,
         body: Vec<Stmt>,
     },
+    Builtin(BuiltinFunction),
 }
 
 #[derive(Debug, Clone)]
@@ -55,9 +140,34 @@ impl Default for Environment {
 
 impl Environment {
     pub fn new() -> Self {
-        Self {
-            values: HashMap::new(),
-        }
+        let mut values = HashMap::new();
+
+        values.insert(
+            "print".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Print),
+        );
+        values.insert(
+            "len".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Len),
+        );
+        values.insert(
+            "toString".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::ToString),
+        );
+        values.insert(
+            "vector".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Vector),
+        );
+        values.insert(
+            "push".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Push),
+        );
+        values.insert(
+            "pop".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Pop),
+        );
+
+        Self { values }
     }
 
     pub fn define(&mut self, name: String, value: Value) {
@@ -85,6 +195,7 @@ impl Environment {
         }
     }
 }
+
 #[cfg(test)]
 pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
     let mut env = Environment::new();
@@ -113,7 +224,6 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
             env.define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
-        _ => Ok(Value::Nil), // 其他不支持语句
     }
 }
 
@@ -172,26 +282,34 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
         }
-        Expr::FunctionCall { name, args } => {
-            let (params, body) = match env.get_function(name.as_str()) {
-                Some(func) => func,
-                None => return Err(InterpreterError::UndefinedVariable(name.clone())),
-            };
+        Expr::FunctionCall { name, args } => match env.get_function(name.as_str()) {
+            Some((params, body)) => {
+                if params.len() != args.len() {
+                    return Err(InterpreterError::InvalidOperation(
+                        "参数数量不匹配".to_string(),
+                    ));
+                }
 
-            if params.len() != args.len() {
-                return Err(InterpreterError::InvalidOperation(
-                    "参数数量不匹配".to_string(),
-                ));
+                let mut call_env = env.clone();
+                for (param, arg) in params.iter().zip(args.iter()) {
+                    let value = eval_expr(arg, env)?;
+                    call_env.define(param.clone(), value);
+                }
+
+                eval_with_env(body, &mut call_env)
             }
+            None => {
+                let evaluated_args = args
+                    .iter()
+                    .map(|arg| eval_expr(arg, &mut env.clone()))
+                    .collect::<Result<Vec<_>, _>>()?;
 
-            let mut call_env = env.clone();
-            for (param, arg) in params.iter().zip(args.iter()) {
-                let value = eval_expr(arg, env)?;
-                call_env.define(param.clone(), value);
+                match env.values.get(name.as_str()) {
+                    Some(EnvironmentValue::Builtin(builtin)) => builtin.call(evaluated_args),
+                    _ => Err(InterpreterError::UndefinedVariable(name.clone())),
+                }
             }
-
-            eval_with_env(body, &mut call_env)
-        }
+        },
         Expr::If {
             condition,
             then_branch,
@@ -213,7 +331,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             }
         }
         Expr::Block(statements) => {
-            let mut block_env = env.clone(); // 创建新的作用域
+            let mut block_env = env.clone();
             let mut result = Value::Nil;
             for stmt in statements {
                 result = eval_stmt(stmt, &mut block_env)?;
@@ -221,7 +339,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             Ok(result)
         }
         Expr::While { condition, body } => {
-            let mut result = Value::Nil;
+            let mut result = Vec::new();
             loop {
                 let condition_value = eval_expr(condition, env)?;
                 if let Value::Boolean(b) = condition_value {
@@ -233,14 +351,18 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                         "While condition must be boolean".to_string(),
                     ));
                 }
-
+                let (last, body) = body.split_last().unwrap();
                 for stmt in body {
-                    result = eval_stmt(stmt, env)?;
+                    eval_stmt(stmt, env)?;
                 }
+                result.push(eval_stmt(last, env)?);
             }
-            Ok(result)
+            if result.is_empty() {
+                Ok(Value::Nil)
+            } else {
+                Ok(Value::Vector(result))
+            }
         }
-        _ => Err(InterpreterError::UnsupportedExpression(format!("{expr:?}"))),
     }
 }
 
@@ -340,7 +462,14 @@ mod tests {
         let tokens = tokenize("{ let x = 0; while x < 3 { x = x + 1 } }").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(3.0));
+        assert_eq!(
+            result,
+            Value::Vector(Vec::from([
+                Value::Number(1.0),
+                Value::Number(2.0),
+                Value::Number(3.0)
+            ]))
+        );
     }
 
     #[test]
@@ -353,7 +482,8 @@ mod tests {
 
     #[test]
     fn test_nested_while_loops() {
-        let tokens = tokenize("{
+        let tokens = tokenize(
+            "{
             let x = 0;
             let y = 0;
             while x < 2 {
@@ -363,7 +493,17 @@ mod tests {
                 }
             }
             y
-        }").unwrap();
+        }",
+        )
+        .unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(3.0))
+    }
+
+    #[test]
+    fn test_vector_operations() {
+        let tokens = tokenize("let v = vector(1, 2, 3); push(v, 4); pop(v)").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(3.0));

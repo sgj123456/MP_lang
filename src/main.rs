@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 break;
             }
             Err(err) => {
-                eprintln!("读取错误: {:?}", err);
+                eprintln!("读取错误: {err:?}");
                 break;
             }
         }

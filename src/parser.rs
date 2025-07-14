@@ -18,7 +18,7 @@ impl Parser {
         while !self.is_at_end() {
             let stmt = self.statement();
             statements.push(stmt);
-            
+
             // 处理分号分隔符
             while self.match_token(&Token::Semicolon) {
                 // 跳过连续的分号
@@ -32,14 +32,12 @@ impl Parser {
             self.let_statement()
         } else if self.match_token(&Token::Keyword("fn".to_string())) {
             self.function_statement()
-        } else if self.match_token(&Token::Keyword("while".to_string())) {
-            self.while_statement()
         } else {
             Stmt::Expr(self.expression())
         }
     }
 
-    fn while_statement(&mut self) -> Stmt {
+    fn while_expression(&mut self) -> Expr {
         let condition = self.expression();
         self.consume(&Token::LeftBrace, "Expect '{' after while condition");
         let mut body = Vec::new();
@@ -50,10 +48,10 @@ impl Parser {
             }
         }
         self.consume(&Token::RightBrace, "Expect '}' after while body");
-        Stmt::Expr(Expr::While {
+        Expr::While {
             condition: Box::new(condition),
             body,
-        })
+        }
     }
 
     fn let_statement(&mut self) -> Stmt {
@@ -66,6 +64,8 @@ impl Parser {
     fn expression(&mut self) -> Expr {
         if self.match_token(&Token::Keyword("if".to_string())) {
             self.if_expression()
+        } else if self.match_token(&Token::Keyword("while".to_string())) {
+            self.while_expression()
         } else {
             self.assignment()
         }
@@ -73,7 +73,7 @@ impl Parser {
 
     fn assignment(&mut self) -> Expr {
         let expr = self.equality();
-        
+
         if self.match_token(&Token::Equal) {
             let value = self.assignment();
             if let Expr::Variable(name) = expr {
@@ -85,7 +85,7 @@ impl Parser {
             }
             panic!("Invalid assignment target");
         }
-        
+
         expr
     }
 
@@ -224,7 +224,7 @@ impl Parser {
             let mut statements = Vec::new();
             while !self.check(&Token::RightBrace) && !self.is_at_end() {
                 statements.push(self.statement());
-                
+
                 // 处理分号分隔符
                 while self.match_token(&Token::Semicolon) {
                     // 跳过连续的分号
