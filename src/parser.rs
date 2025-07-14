@@ -28,9 +28,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Stmt {
-        if self.match_token(&Token::Keyword("let".to_string())) {
+        if self.match_token(&Token::Let) {
             self.let_statement()
-        } else if self.match_token(&Token::Keyword("fn".to_string())) {
+        } else if self.match_token(&Token::Fn) {
             self.function_statement()
         } else {
             Stmt::Expr(self.expression())
@@ -62,9 +62,9 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        if self.match_token(&Token::Keyword("if".to_string())) {
+        if self.match_token(&Token::If) {
             self.if_expression()
-        } else if self.match_token(&Token::Keyword("while".to_string())) {
+        } else if self.match_token(&Token::While) {
             self.while_expression()
         } else {
             self.assignment()
@@ -92,9 +92,7 @@ impl Parser {
     fn equality(&mut self) -> Expr {
         let mut expr = self.comparison();
 
-        while self.match_token(&Token::Keyword("==".to_string()))
-            || self.match_token(&Token::Keyword("!=".to_string()))
-        {
+        while self.match_token(&Token::Equal) || self.match_token(&Token::NotEqual) {
             let op = self.previous().to_owned();
             let right = self.comparison();
             expr = Expr::BinaryOp {
@@ -110,10 +108,10 @@ impl Parser {
     fn comparison(&mut self) -> Expr {
         let mut expr = self.term();
 
-        while self.match_token(&Token::Keyword(">".to_string()))
-            || self.match_token(&Token::Keyword(">=".to_string()))
-            || self.match_token(&Token::Keyword("<".to_string()))
-            || self.match_token(&Token::Keyword("<=".to_string()))
+        while self.match_token(&Token::GreaterThan)
+            || self.match_token(&Token::GreaterThanOrEqual)
+            || self.match_token(&Token::LessThan)
+            || self.match_token(&Token::LessThanOrEqual)
         {
             let op = self.previous().to_owned();
             let right = self.term();
@@ -286,7 +284,7 @@ impl Parser {
         let condition = Box::new(self.expression());
         let then_branch = vec![self.statement()];
 
-        let else_branch = if self.match_token(&Token::Keyword("else".to_string())) {
+        let else_branch = if self.match_token(&Token::Else) {
             Some(vec![self.statement()])
         } else {
             None
@@ -385,7 +383,7 @@ mod tests {
             vec![Stmt::Expr(Expr::If {
                 condition: Box::new(Expr::BinaryOp {
                     left: Box::new(Expr::Number(1.0)),
-                    op: Token::Keyword("<".to_string()),
+                    op: Token::LessThan,
                     right: Box::new(Expr::Number(2.0))
                 }),
                 then_branch: vec![Stmt::Expr(Expr::Number(3.0))],

@@ -35,15 +35,27 @@ pub enum Token {
     Multiply,
     Divide,
     Equal,
+    NotEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
     LeftParen,
     RightParen,
+    #[allow(dead_code)]
     LeftBracket,
+    #[allow(dead_code)]
     RightBracket,
     LeftBrace,
     RightBrace,
     Semicolon,
     Identifier(String),
-    Keyword(String),
+    Let,
+    Fn,
+    If,
+    Else,
+    While,
+    Return,
     Eof,
 }
 
@@ -116,7 +128,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
             '=' => {
                 chars.next();
                 if let Some('=') = chars.peek() {
-                    tokens.push(Token::Keyword("==".to_string()));
+                    tokens.push(Token::Equal);
                     chars.next();
                 } else {
                     tokens.push(Token::Equal);
@@ -125,7 +137,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
             '!' => {
                 chars.next();
                 if let Some('=') = chars.peek() {
-                    tokens.push(Token::Keyword("!=".to_string()));
+                    tokens.push(Token::NotEqual);
                     chars.next();
                 } else {
                     return Err(LexerError::UnknownOperator('!'));
@@ -134,19 +146,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
             '>' => {
                 chars.next();
                 if let Some('=') = chars.peek() {
-                    tokens.push(Token::Keyword(">=".to_string()));
+                    tokens.push(Token::GreaterThanOrEqual);
                     chars.next();
                 } else {
-                    tokens.push(Token::Keyword(">".to_string()));
+                    tokens.push(Token::GreaterThan);
                 }
             }
             '<' => {
                 chars.next();
                 if let Some('=') = chars.peek() {
-                    tokens.push(Token::Keyword("<=".to_string()));
+                    tokens.push(Token::LessThanOrEqual);
                     chars.next();
                 } else {
-                    tokens.push(Token::Keyword("<".to_string()));
+                    tokens.push(Token::LessThan);
                 }
             }
             '(' => {
@@ -200,8 +212,23 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
                 }
                 // 简单关键字识别
                 match ident.as_str() {
-                    "let" | "fn" | "if" | "else" | "while" => {
-                        tokens.push(Token::Keyword(ident));
+                    "let" => {
+                        tokens.push(Token::Let);
+                    }
+                    "fn" => {
+                        tokens.push(Token::Fn);
+                    }
+                    "if" => {
+                        tokens.push(Token::If);
+                    }
+                    "else" => {
+                        tokens.push(Token::Else);
+                    }
+                    "while" => {
+                        tokens.push(Token::While);
+                    }
+                    "return" => {
+                        tokens.push(Token::Return);
                     }
                     "true" => {
                         tokens.push(Token::Boolean(true));
@@ -301,15 +328,7 @@ mod tests {
     #[test]
     fn test_keywords() {
         let tokens = tokenize("let if else").unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                Token::Keyword("let".to_string()),
-                Token::Keyword("if".to_string()),
-                Token::Keyword("else".to_string()),
-                Token::Eof
-            ]
-        );
+        assert_eq!(tokens, vec![Token::Let, Token::If, Token::Else, Token::Eof]);
     }
 
     #[test]

@@ -7,6 +7,7 @@ pub enum InterpreterError {
     UndefinedVariable(String),
     InvalidOperation(String),
     TypeMismatch(String),
+    #[allow(dead_code)]
     UnsupportedExpression(String),
 }
 
@@ -257,17 +258,17 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                     Token::Minus => Ok(Value::Number(l - r)),
                     Token::Multiply => Ok(Value::Number(l * r)),
                     Token::Divide => Ok(Value::Number(l / r)),
-                    Token::Keyword(op) if op == ">" => Ok(Value::Boolean(l > r)),
-                    Token::Keyword(op) if op == ">=" => Ok(Value::Boolean(l >= r)),
-                    Token::Keyword(op) if op == "<" => Ok(Value::Boolean(l < r)),
-                    Token::Keyword(op) if op == "<=" => Ok(Value::Boolean(l <= r)),
-                    Token::Keyword(op) if op == "==" => Ok(Value::Boolean(l == r)),
-                    Token::Keyword(op) if op == "!=" => Ok(Value::Boolean(l != r)),
+                    Token::GreaterThan => Ok(Value::Boolean(l > r)),
+                    Token::GreaterThanOrEqual => Ok(Value::Boolean(l >= r)),
+                    Token::LessThan => Ok(Value::Boolean(l < r)),
+                    Token::LessThanOrEqual => Ok(Value::Boolean(l <= r)),
+                    Token::Equal => Ok(Value::Boolean(l == r)),
+                    Token::NotEqual => Ok(Value::Boolean(l != r)),
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 (Value::Boolean(l), Value::Boolean(r)) => match op {
-                    Token::Keyword(op) if op == "==" => Ok(Value::Boolean(l == r)),
-                    Token::Keyword(op) if op == "!=" => Ok(Value::Boolean(l != r)),
+                    Token::Equal => Ok(Value::Boolean(l == r)),
+                    Token::NotEqual => Ok(Value::Boolean(l != r)),
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 _ => Err(InterpreterError::TypeMismatch(

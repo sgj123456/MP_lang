@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let tokens = lexer::tokenize(&content)?;
         let ast = parser::parse(tokens);
         let result = interpreter::eval_with_env(ast, &mut env)?;
-        println!("执行结果: {result:?}");
+        dbg!(result);
         return Ok(());
     }
 
