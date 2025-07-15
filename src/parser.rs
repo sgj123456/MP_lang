@@ -359,11 +359,7 @@ impl Parser {
             self.consume(&Token::RightParen, "Expect ')' after parameters");
         }
 
-        self.consume(&Token::LeftBrace, "Expect '{' before function body");
-        let mut body = Vec::new();
-        while !self.match_token(&Token::RightBrace) && !self.is_at_end() {
-            body.push(self.statement());
-        }
+        let body = self.expression();
 
         Stmt::Function { name, params, body }
     }
@@ -466,11 +462,11 @@ mod tests {
             vec![Stmt::Function {
                 name: "add".to_string(),
                 params: vec!["a".to_string(), "b".to_string()],
-                body: vec![Stmt::Result(Expr::BinaryOp {
+                body: Expr::Block(vec![Stmt::Result(Expr::BinaryOp {
                     left: Box::new(Expr::Variable("a".to_string())),
                     op: Token::Plus,
                     right: Box::new(Expr::Variable("b".to_string()))
-                })]
+                })])
             }]
         );
     }

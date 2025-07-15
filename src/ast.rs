@@ -43,7 +43,7 @@ pub enum Stmt {
     Function {
         name: String,
         params: Vec<String>,
-        body: Vec<Stmt>,
+        body: Expr,
     },
     Result(Expr),
     Return(Option<Expr>),

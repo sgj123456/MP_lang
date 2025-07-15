@@ -125,10 +125,7 @@ impl BuiltinFunction {
 #[derive(Debug, Clone)]
 pub enum EnvironmentValue {
     Variable(Value),
-    Function {
-        params: Vec<String>,
-        body: Vec<Stmt>,
-    },
+    Function { params: Vec<String>, body: Expr },
     Builtin(BuiltinFunction),
 }
 
@@ -179,7 +176,7 @@ impl Environment {
         self.values.insert(name, EnvironmentValue::Variable(value));
     }
 
-    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Vec<Stmt>) {
+    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Expr) {
         self.values
             .insert(name, EnvironmentValue::Function { params, body });
     }
@@ -191,7 +188,7 @@ impl Environment {
         }
     }
 
-    pub fn get_function(&self, name: &str) -> Option<(Vec<String>, Vec<Stmt>)> {
+    pub fn get_function(&self, name: &str) -> Option<(Vec<String>, Expr)> {
         match self.values.get(name) {
             Some(EnvironmentValue::Function { params, body }) => {
                 Some((params.clone(), body.clone()))
@@ -307,8 +304,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                     let value = eval_expr(arg, env)?;
                     call_env.define(param.clone(), value);
                 }
-
-                match eval_with_env(body.clone(), &mut call_env) {
+                match eval_expr(&body, &mut call_env) {
                     Ok(value) | Err(InterpreterError::Return(value)) => Ok(value),
                     Err(err) => Err(err),
                 }
@@ -318,7 +314,6 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                     .iter()
                     .map(|arg| eval_expr(arg, &mut env.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
-
                 match env.values.get(name.as_str()) {
                     Some(EnvironmentValue::Builtin(builtin)) => builtin.call(evaluated_args),
                     _ => Err(InterpreterError::UndefinedVariable(name.clone())),
