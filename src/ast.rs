@@ -1,6 +1,6 @@
 // 抽象语法树节点定义
 
-use crate::lexer::Token;
+use crate::lexer::TokenKind;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
@@ -16,11 +16,11 @@ pub enum Expr {
     Block(Vec<Stmt>),
     BinaryOp {
         left: Box<Expr>,
-        op: Token,
+        op: TokenKind,
         right: Box<Expr>,
     },
     UnaryOp {
-        op: Token,
+        op: TokenKind,
         expr: Box<Expr>,
     },
     FunctionCall {

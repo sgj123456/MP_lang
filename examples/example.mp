@@ -1,6 +1,7 @@
 let a = 10
 let b = 20
 fn add(x, y) {
+    x = x + 1
     return x + y
     a = 100 // you are able to modify 'a' here, but it won't affect the global variable 'a'.
     x + y + a

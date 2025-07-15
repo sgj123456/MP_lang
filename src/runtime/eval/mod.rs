@@ -1,8 +1,10 @@
 use crate::{
-    ast::{Expr, Stmt}, lexer::Token, runtime::{
-        environment::{environment_value::EnvironmentValue, value::Value, Environment},
+    ast::{Expr, Stmt},
+    lexer::{Token, TokenKind},
+    runtime::{
+        environment::{Environment, environment_value::EnvironmentValue, value::Value},
         error::interpreter_error::InterpreterError,
-    }
+    },
 };
 
 pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
@@ -51,7 +53,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
         Expr::BinaryOp { left, op, right } => {
-            if let Token::Equal = op {
+            if let TokenKind::Equal = op {
                 if let Expr::Variable(name) = left.as_ref() {
                     let right_value = eval_expr(right, env)?;
                     env.define(name.clone(), right_value.clone());
@@ -68,21 +70,21 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
 
             match (left_value, right_value) {
                 (Value::Number(l), Value::Number(r)) => match op {
-                    Token::Plus => Ok(Value::Number(l + r)),
-                    Token::Minus => Ok(Value::Number(l - r)),
-                    Token::Multiply => Ok(Value::Number(l * r)),
-                    Token::Divide => Ok(Value::Number(l / r)),
-                    Token::GreaterThan => Ok(Value::Boolean(l > r)),
-                    Token::GreaterThanOrEqual => Ok(Value::Boolean(l >= r)),
-                    Token::LessThan => Ok(Value::Boolean(l < r)),
-                    Token::LessThanOrEqual => Ok(Value::Boolean(l <= r)),
-                    Token::Equal => Ok(Value::Boolean(l == r)),
-                    Token::NotEqual => Ok(Value::Boolean(l != r)),
+                    TokenKind::Plus => Ok(Value::Number(l + r)),
+                    TokenKind::Minus => Ok(Value::Number(l - r)),
+                    TokenKind::Multiply => Ok(Value::Number(l * r)),
+                    TokenKind::Divide => Ok(Value::Number(l / r)),
+                    TokenKind::GreaterThan => Ok(Value::Boolean(l > r)),
+                    TokenKind::GreaterThanOrEqual => Ok(Value::Boolean(l >= r)),
+                    TokenKind::LessThan => Ok(Value::Boolean(l < r)),
+                    TokenKind::LessThanOrEqual => Ok(Value::Boolean(l <= r)),
+                    TokenKind::Equal => Ok(Value::Boolean(l == r)),
+                    TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 (Value::Boolean(l), Value::Boolean(r)) => match op {
-                    Token::Equal => Ok(Value::Boolean(l == r)),
-                    Token::NotEqual => Ok(Value::Boolean(l != r)),
+                    TokenKind::Equal => Ok(Value::Boolean(l == r)),
+                    TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 _ => Err(InterpreterError::TypeMismatch(
@@ -93,7 +95,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
         Expr::UnaryOp { op, expr } => {
             let value = eval_expr(expr, env)?;
             match (op, value) {
-                (Token::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
+                (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
         }

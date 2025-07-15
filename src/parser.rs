@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt},
-    lexer::Token,
+    lexer::{Token, TokenKind},
 };
 
 pub struct Parser {
@@ -22,16 +22,16 @@ impl Parser {
         statements
     }
     fn delete_empty_statements(&mut self) {
-        while self.match_token(&Token::Semicolon) || self.match_token(&Token::Newline) {}
+        while self.match_token(&TokenKind::Semicolon) || self.match_token(&TokenKind::Newline) {}
     }
     fn statement(&mut self) -> Stmt {
         self.delete_empty_statements();
-        let stmt = if self.match_token(&Token::Let) {
+        let stmt = if self.match_token(&TokenKind::Let) {
             self.let_statement()
-        } else if self.match_token(&Token::Fn) {
+        } else if self.match_token(&TokenKind::Fn) {
             self.function_statement()
-        } else if self.match_token(&Token::Return) {
-            let value = if !self.check(&Token::Semicolon) && !self.check(&Token::Newline) {
+        } else if self.match_token(&TokenKind::Return) {
+            let value = if !self.check(&TokenKind::Semicolon) && !self.check(&TokenKind::Newline) {
                 Some(self.expression())
             } else {
                 None
@@ -39,7 +39,7 @@ impl Parser {
             Stmt::Return(value)
         } else {
             let expr = self.expression();
-            if !self.check(&Token::Semicolon)
+            if !self.check(&TokenKind::Semicolon)
                 && (self.is_at_last_line() || self.is_at_block_last_line())
             {
                 Stmt::Result(expr)
@@ -49,7 +49,7 @@ impl Parser {
         };
         if !self.is_at_last_line()
             && !self.is_at_block_last_line()
-            && !self.match_token(&Token::Semicolon)
+            && !self.match_token(&TokenKind::Semicolon)
         {
             panic!("Expect ';' or newline after expression");
         }
@@ -59,11 +59,11 @@ impl Parser {
 
     fn while_expression(&mut self) -> Expr {
         let condition = self.expression();
-        self.consume(&Token::LeftBrace, "Expect '{' after while condition");
+        self.consume(&TokenKind::LeftBrace, "Expect '{' after while condition");
 
         let mut body = Vec::new();
         loop {
-            if self.check(&Token::RightBrace) || self.is_at_end() {
+            if self.check(&TokenKind::RightBrace) || self.is_at_end() {
                 break;
             }
 
@@ -71,7 +71,7 @@ impl Parser {
             body.push(self.statement());
         }
 
-        self.consume(&Token::RightBrace, "Expect '}' after while body");
+        self.consume(&TokenKind::RightBrace, "Expect '}' after while body");
         Expr::While {
             condition: Box::new(condition),
             body,
@@ -80,15 +80,15 @@ impl Parser {
 
     fn let_statement(&mut self) -> Stmt {
         let name = self.consume_identifier();
-        self.consume(&Token::Equal, "Expect '=' after variable name");
+        self.consume(&TokenKind::Equal, "Expect '=' after variable name");
         let value = self.expression();
         Stmt::Let { name, value }
     }
 
     fn expression(&mut self) -> Expr {
-        if self.match_token(&Token::If) {
+        if self.match_token(&TokenKind::If) {
             self.if_expression()
-        } else if self.match_token(&Token::While) {
+        } else if self.match_token(&TokenKind::While) {
             self.while_expression()
         } else {
             self.assignment()
@@ -98,12 +98,12 @@ impl Parser {
     fn assignment(&mut self) -> Expr {
         let expr = self.equality();
 
-        if self.match_token(&Token::Equal) {
+        if self.match_token(&TokenKind::Equal) {
             let value = self.assignment();
             if let Expr::Variable(name) = expr {
                 return Expr::BinaryOp {
                     left: Box::new(Expr::Variable(name)),
-                    op: Token::Equal,
+                    op: TokenKind::Equal,
                     right: Box::new(value),
                 };
             }
@@ -116,8 +116,8 @@ impl Parser {
     fn equality(&mut self) -> Expr {
         let mut expr = self.comparison();
 
-        while self.match_token(&Token::Equal) || self.match_token(&Token::NotEqual) {
-            let op = self.previous().to_owned();
+        while self.match_token(&TokenKind::Equal) || self.match_token(&TokenKind::NotEqual) {
+            let op = self.previous().to_owned().kind;
             let right = self.comparison();
             expr = Expr::BinaryOp {
                 left: Box::new(expr),
@@ -132,12 +132,12 @@ impl Parser {
     fn comparison(&mut self) -> Expr {
         let mut expr = self.term();
 
-        while self.match_token(&Token::GreaterThan)
-            || self.match_token(&Token::GreaterThanOrEqual)
-            || self.match_token(&Token::LessThan)
-            || self.match_token(&Token::LessThanOrEqual)
+        while self.match_token(&TokenKind::GreaterThan)
+            || self.match_token(&TokenKind::GreaterThanOrEqual)
+            || self.match_token(&TokenKind::LessThan)
+            || self.match_token(&TokenKind::LessThanOrEqual)
         {
-            let op = self.previous().to_owned();
+            let op = self.previous().to_owned().kind;
             let right = self.term();
             expr = Expr::BinaryOp {
                 left: Box::new(expr),
@@ -152,8 +152,8 @@ impl Parser {
     fn term(&mut self) -> Expr {
         let mut expr = self.factor();
 
-        while self.match_token(&Token::Plus) || self.match_token(&Token::Minus) {
-            let op = self.previous().to_owned();
+        while self.match_token(&TokenKind::Plus) || self.match_token(&TokenKind::Minus) {
+            let op = self.previous().to_owned().kind;
             let right = self.factor();
             expr = Expr::BinaryOp {
                 left: Box::new(expr),
@@ -168,8 +168,8 @@ impl Parser {
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
 
-        while self.match_token(&Token::Multiply) || self.match_token(&Token::Divide) {
-            let op = self.previous().to_owned();
+        while self.match_token(&TokenKind::Multiply) || self.match_token(&TokenKind::Divide) {
+            let op = self.previous().to_owned().kind;
             let right = self.unary();
             expr = Expr::BinaryOp {
                 left: Box::new(expr),
@@ -182,8 +182,8 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Expr {
-        if self.match_token(&Token::Minus) {
-            let op = self.previous().to_owned();
+        if self.match_token(&TokenKind::Minus) {
+            let op = self.previous().to_owned().kind;
             let expr = self.unary();
             Expr::UnaryOp {
                 op,
@@ -198,54 +198,54 @@ impl Parser {
         if self.is_at_end() {
             panic!("Unexpected end of input")
         }
-        match self.current_token() {
-            Token::Number(n) => {
+        match &self.current_token().kind {
+            TokenKind::Number(n) => {
                 let num = *n;
                 self.advance();
                 Expr::Number(num)
             }
-            Token::Boolean(b) => {
+            TokenKind::Boolean(b) => {
                 let val = *b;
                 self.advance();
                 Expr::Boolean(val)
             }
-            Token::String(s) => {
+            TokenKind::String(s) => {
                 let s = s.clone();
                 self.advance();
                 Expr::String(s)
             }
-            Token::Identifier(name) => {
+            TokenKind::Identifier(name) => {
                 let name = name.clone();
                 self.advance();
 
-                if self.match_token(&Token::LeftParen) {
+                if self.match_token(&TokenKind::LeftParen) {
                     let mut args = Vec::new();
-                    if !self.match_token(&Token::RightParen) {
+                    if !self.match_token(&TokenKind::RightParen) {
                         loop {
                             args.push(self.expression());
-                            if !self.match_token(&Token::Comma) {
+                            if !self.match_token(&TokenKind::Comma) {
                                 break;
                             }
                         }
-                        self.consume(&Token::RightParen, "Expect ')' after arguments");
+                        self.consume(&TokenKind::RightParen, "Expect ')' after arguments");
                     }
                     return Expr::FunctionCall { name, args };
                 }
                 Expr::Variable(name)
             }
-            Token::LeftParen => {
+            TokenKind::LeftParen => {
                 self.advance();
                 let expr = self.expression();
-                self.consume(&Token::RightParen, "Expect ')' after expression");
+                self.consume(&TokenKind::RightParen, "Expect ')' after expression");
                 expr
             }
-            Token::LeftBrace => {
+            TokenKind::LeftBrace => {
                 self.advance();
                 let mut statements = Vec::new();
-                while !self.check(&Token::RightBrace) && !self.is_at_end() {
+                while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                     statements.push(self.statement());
                 }
-                self.consume(&Token::RightBrace, "Expect '}' after block");
+                self.consume(&TokenKind::RightBrace, "Expect '}' after block");
                 Expr::Block(statements)
             }
             _ => {
@@ -254,8 +254,8 @@ impl Parser {
         }
     }
 
-    fn match_token(&mut self, token: &Token) -> bool {
-        if self.check(token) {
+    fn match_token(&mut self, kind: &TokenKind) -> bool {
+        if self.check(kind) {
             self.advance();
             true
         } else {
@@ -267,11 +267,20 @@ impl Parser {
         &self.tokens[self.current]
     }
 
-    fn check(&self, token: &Token) -> bool {
+    fn check(&self, kind: &TokenKind) -> bool {
         if self.is_at_end() {
             false
         } else {
-            self.current_token() == token
+            &self.current_token().kind == kind
+        }
+    }
+
+    fn consume(&mut self, kind: &TokenKind, message: &str) {
+        if self.check(kind) {
+            self.advance();
+        } else {
+            let token = self.current_token();
+            panic!("{} at {}:{}", message, token.span.line, token.span.column);
         }
     }
 
@@ -283,32 +292,33 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.tokens.len() || self.tokens[self.current] == Token::Eof
+        self.current >= self.tokens.len() || self.tokens[self.current].kind == TokenKind::Eof
     }
 
     fn is_at_last_line(&self) -> bool {
-        !self.find(&Token::Newline)
+        !self.find(&TokenKind::Newline)
     }
     fn is_at_block_last_line(&self) -> bool {
-        self.find(&Token::RightBrace) && !self.find_before(&Token::Newline, &Token::RightBrace)
+        self.find(&TokenKind::RightBrace)
+            && !self.find_before(&TokenKind::Newline, &TokenKind::RightBrace)
     }
 
-    fn find(&self, token: &Token) -> bool {
+    fn find(&self, token: &TokenKind) -> bool {
         for i in self.current..self.tokens.len() {
-            if self.tokens[i] == *token {
+            if self.tokens[i].kind == *token {
                 return true;
             }
         }
         false
     }
-    fn find_before(&self, token: &Token, before_token: &Token) -> bool {
+    fn find_before(&self, token: &TokenKind, before_token: &TokenKind) -> bool {
         let mut found = false;
         for i in (self.current - 1)..=0 {
-            if self.tokens[i] == *token {
+            if self.tokens[i].kind == *token {
                 found = true;
                 break;
             }
-            if self.tokens[i] == *before_token {
+            if self.tokens[i].kind == *before_token {
                 return false;
             }
         }
@@ -319,19 +329,11 @@ impl Parser {
         &self.tokens[self.current - 1]
     }
 
-    fn consume(&mut self, token: &Token, message: &str) {
-        if self.check(token) {
-            self.advance();
-        } else {
-            panic!("{}", message);
-        }
-    }
-
     fn if_expression(&mut self) -> Expr {
         let condition = Box::new(self.expression());
         let then_branch = Box::new(self.expression());
 
-        let else_branch = if self.match_token(&Token::Else) {
+        let else_branch = if self.match_token(&TokenKind::Else) {
             Some(Box::new(self.expression()))
         } else {
             None
@@ -346,17 +348,17 @@ impl Parser {
 
     fn function_statement(&mut self) -> Stmt {
         let name = self.consume_identifier();
-        self.consume(&Token::LeftParen, "Expect '(' after function name");
+        self.consume(&TokenKind::LeftParen, "Expect '(' after function name");
 
         let mut params = Vec::new();
-        if !self.match_token(&Token::RightParen) {
+        if !self.match_token(&TokenKind::RightParen) {
             loop {
                 params.push(self.consume_identifier());
-                if !self.match_token(&Token::Comma) {
+                if !self.match_token(&TokenKind::Comma) {
                     break;
                 }
             }
-            self.consume(&Token::RightParen, "Expect ')' after parameters");
+            self.consume(&TokenKind::RightParen, "Expect ')' after parameters");
         }
 
         let body = self.expression();
@@ -365,7 +367,7 @@ impl Parser {
     }
 
     fn consume_identifier(&mut self) -> String {
-        if let Token::Identifier(name) = self.advance() {
+        if let TokenKind::Identifier(name) = &self.advance().kind {
             name.to_owned()
         } else {
             panic!("Expect identifier");
@@ -381,7 +383,7 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Stmt> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::tokenize;
+    use crate::lexer::{Span, tokenize};
 
     #[test]
     fn test_number_expr() {
@@ -398,7 +400,7 @@ mod tests {
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
                 left: Box::new(Expr::Number(1.0)),
-                op: Token::Plus,
+                op: TokenKind::Plus,
                 right: Box::new(Expr::Number(2.0))
             })]
         );
@@ -426,7 +428,7 @@ mod tests {
             vec![Stmt::Result(Expr::If {
                 condition: Box::new(Expr::BinaryOp {
                     left: Box::new(Expr::Number(1.0)),
-                    op: Token::LessThan,
+                    op: TokenKind::LessThan,
                     right: Box::new(Expr::Number(2.0))
                 }),
                 then_branch: Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(3.0))])),
@@ -443,10 +445,10 @@ mod tests {
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
                 left: Box::new(Expr::Number(1.0)),
-                op: Token::Plus,
+                op: TokenKind::Plus,
                 right: Box::new(Expr::BinaryOp {
                     left: Box::new(Expr::Number(2.0)),
-                    op: Token::Multiply,
+                    op: TokenKind::Multiply,
                     right: Box::new(Expr::Number(3.0))
                 })
             })]
@@ -464,7 +466,7 @@ mod tests {
                 params: vec!["a".to_string(), "b".to_string()],
                 body: Expr::Block(vec![Stmt::Result(Expr::BinaryOp {
                     left: Box::new(Expr::Variable("a".to_string())),
-                    op: Token::Plus,
+                    op: TokenKind::Plus,
                     right: Box::new(Expr::Variable("b".to_string()))
                 })])
             }]
@@ -550,12 +552,12 @@ mod tests {
             vec![
                 Stmt::Expr(Expr::BinaryOp {
                     left: Box::new(Expr::Number(1.0)),
-                    op: Token::Plus,
+                    op: TokenKind::Plus,
                     right: Box::new(Expr::Number(2.0))
                 }),
                 Stmt::Result(Expr::BinaryOp {
                     left: Box::new(Expr::Number(3.0)),
-                    op: Token::Multiply,
+                    op: TokenKind::Multiply,
                     right: Box::new(Expr::Number(4.0))
                 })
             ]
