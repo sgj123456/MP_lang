@@ -21,8 +21,15 @@ impl Parser {
         }
         statements
     }
+    fn delete_empty_lines(&mut self) {
+        self.delete_continuous_tokens(&TokenKind::Newline);
+    }
     fn delete_empty_statements(&mut self) {
-        while self.match_token(&TokenKind::Semicolon) || self.match_token(&TokenKind::Newline) {}
+        self.delete_continuous_tokens(&TokenKind::Semicolon);
+        self.delete_continuous_tokens(&TokenKind::Newline);
+    }
+    fn delete_continuous_tokens(&mut self, kind: &TokenKind) {
+        while self.match_token(kind) {}
     }
     fn statement(&mut self) -> Stmt {
         self.delete_empty_statements();
@@ -39,19 +46,25 @@ impl Parser {
             Stmt::Return(value)
         } else {
             let expr = self.expression();
-            if !self.check(&TokenKind::Semicolon)
-                && (self.is_at_last_line() || self.is_at_block_last_line())
+            if self.check(&TokenKind::Semicolon)
+                || (self.check(&TokenKind::Newline)
+                    && !self.is_at_block_last_not_empty_line()
+                    && !self.is_at_last_not_empty_line())
             {
+                Stmt::Expr(expr)
+            } else if self.is_at_last_not_empty_line() || self.is_at_block_last_not_empty_line() {
                 Stmt::Result(expr)
             } else {
-                Stmt::Expr(expr)
+                panic!("Unexpected token: {:?}", self.current());
             }
         };
-        if !self.is_at_last_line()
-            && !self.is_at_block_last_line()
-            && !self.match_token(&TokenKind::Semicolon)
+        if !self.match_token(&TokenKind::Semicolon)
+            && !self.match_token(&TokenKind::Newline)
+            && !self.is_at_last_not_empty_line()
+            && !self.is_at_block_last_not_empty_line()
+            && !matches!(stmt, Stmt::Expr(_) | Stmt::Result(_))
         {
-            panic!("Expect ';' or newline after expression");
+            panic!("Unexpected token: {:?}", self.current())
         }
         self.delete_empty_statements();
         stmt
@@ -196,9 +209,13 @@ impl Parser {
 
     fn primary(&mut self) -> Expr {
         if self.is_at_end() {
-            panic!("Unexpected end of input")
+            let token = self.current();
+            panic!(
+                "Unexpected end of input at {}:{}",
+                token.span.line, token.span.column
+            );
         }
-        match &self.current_token().kind {
+        match &self.current().kind {
             TokenKind::Number(n) => {
                 let num = *n;
                 self.advance();
@@ -249,7 +266,11 @@ impl Parser {
                 Expr::Block(statements)
             }
             _ => {
-                panic!("Unexpected token: {:?}", self.previous());
+                let token = self.current();
+                panic!(
+                    "Unexpected token {:?} at {}:{}",
+                    token.kind, token.span.line, token.span.column
+                );
             }
         }
     }
@@ -263,7 +284,7 @@ impl Parser {
         }
     }
 
-    fn current_token(&self) -> &Token {
+    fn current(&self) -> &Token {
         &self.tokens[self.current]
     }
 
@@ -271,7 +292,7 @@ impl Parser {
         if self.is_at_end() {
             false
         } else {
-            &self.current_token().kind == kind
+            &self.current().kind == kind
         }
     }
 
@@ -279,7 +300,7 @@ impl Parser {
         if self.check(kind) {
             self.advance();
         } else {
-            let token = self.current_token();
+            let token = self.current();
             panic!("{} at {}:{}", message, token.span.line, token.span.column);
         }
     }
@@ -292,37 +313,16 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.tokens.len() || self.tokens[self.current].kind == TokenKind::Eof
+        self.tokens[self.current].kind == TokenKind::Eof
     }
 
-    fn is_at_last_line(&self) -> bool {
-        !self.find(&TokenKind::Newline)
+    fn is_at_last_not_empty_line(&mut self) -> bool {
+        self.delete_empty_lines();
+        self.is_at_end()
     }
-    fn is_at_block_last_line(&self) -> bool {
-        self.find(&TokenKind::RightBrace)
-            && !self.find_before(&TokenKind::Newline, &TokenKind::RightBrace)
-    }
-
-    fn find(&self, token: &TokenKind) -> bool {
-        for i in self.current..self.tokens.len() {
-            if self.tokens[i].kind == *token {
-                return true;
-            }
-        }
-        false
-    }
-    fn find_before(&self, token: &TokenKind, before_token: &TokenKind) -> bool {
-        let mut found = false;
-        for i in (self.current - 1)..=0 {
-            if self.tokens[i].kind == *token {
-                found = true;
-                break;
-            }
-            if self.tokens[i].kind == *before_token {
-                return false;
-            }
-        }
-        found
+    fn is_at_block_last_not_empty_line(&mut self) -> bool {
+        self.delete_empty_lines();
+        self.check(&TokenKind::RightBrace)
     }
 
     fn previous(&self) -> &Token {
@@ -383,7 +383,7 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Stmt> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::{Span, tokenize};
+    use crate::lexer::tokenize;
 
     #[test]
     fn test_number_expr() {

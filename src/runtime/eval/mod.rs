@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt},
-    lexer::{Token, TokenKind},
+    lexer::TokenKind,
     runtime::{
         environment::{Environment, environment_value::EnvironmentValue, value::Value},
         error::interpreter_error::InterpreterError,
