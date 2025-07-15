@@ -9,6 +9,7 @@ pub enum InterpreterError {
     TypeMismatch(String),
     #[allow(dead_code)]
     UnsupportedExpression(String),
+    Return(Value),
 }
 
 impl fmt::Display for InterpreterError {
@@ -18,6 +19,7 @@ impl fmt::Display for InterpreterError {
             InterpreterError::InvalidOperation(op) => write!(f, "无效操作: {op}"),
             InterpreterError::TypeMismatch(msg) => write!(f, "类型不匹配: {msg}"),
             InterpreterError::UnsupportedExpression(expr) => write!(f, "不支持的表达式: {expr}"),
+            InterpreterError::Return(value) => write!(f, "函数返回值: {value}"),
         }
     }
 }
@@ -31,6 +33,7 @@ use crate::{
 pub enum Value {
     Number(f64),
     Boolean(bool),
+    String(String),
     Vector(Vec<Value>),
     Nil,
 }
@@ -40,6 +43,7 @@ impl fmt::Display for Value {
         match self {
             Value::Number(n) => write!(f, "{n}"),
             Value::Boolean(b) => write!(f, "{b}"),
+            Value::String(s) => write!(f, "{s}"),
             Value::Nil => write!(f, "nil"),
             Value::Vector(v) => {
                 write!(f, "[")?;
@@ -215,7 +219,10 @@ pub fn eval_with_env(ast: Vec<Stmt>, env: &mut Environment) -> Result<Value, Int
 
 fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterError> {
     match stmt {
-        Stmt::Expr(expr) => eval_expr(expr, env),
+        Stmt::Expr(expr) => {
+            eval_expr(expr, env)?;
+            Ok(Value::Nil)
+        }
         Stmt::Let { name, value } => {
             let value = eval_expr(value, env)?;
             env.define(name.clone(), value);
@@ -225,7 +232,9 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
             env.define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
-        Stmt::Result(expr) | Stmt::Return(expr) => eval_expr(expr, env),
+        Stmt::Result(expr) => eval_expr(expr, env),
+        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
+        Stmt::Return(None) => Err(InterpreterError::Return(Value::Nil)),
     }
 }
 
@@ -233,6 +242,7 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
     match expr {
         Expr::Number(n) => Ok(Value::Number(*n)),
         Expr::Boolean(b) => Ok(Value::Boolean(*b)),
+        Expr::String(s) => Ok(Value::String(s.clone())),
         Expr::Variable(name) => match env.get(name.as_str()) {
             Some(value) => Ok(value),
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
@@ -298,7 +308,10 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                     call_env.define(param.clone(), value);
                 }
 
-                eval_with_env(body, &mut call_env)
+                match eval_with_env(body.clone(), &mut call_env) {
+                    Ok(value) | Err(InterpreterError::Return(value)) => Ok(value),
+                    Err(err) => Err(err),
+                }
             }
             None => {
                 let evaluated_args = args
@@ -320,9 +333,9 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             let condition_value = eval_expr(condition, env)?;
             if let Value::Boolean(b) = condition_value {
                 if b {
-                    eval_with_env(then_branch.clone(), env)
+                    eval_expr(then_branch, env)
                 } else if let Some(else_branch) = else_branch {
-                    eval_with_env(else_branch.clone(), env)
+                    eval_expr(else_branch, env)
                 } else {
                     Ok(Value::Nil)
                 }
@@ -375,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_number_eval() {
-        let tokens = tokenize("123;").unwrap();
+        let tokens = tokenize("123").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(123.0));
@@ -383,7 +396,7 @@ mod tests {
 
     #[test]
     fn test_binary_op_eval() {
-        let tokens = tokenize("1 + 2 * 3;").unwrap();
+        let tokens = tokenize("1 + 2 * 3").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(7.0));
@@ -394,7 +407,7 @@ mod tests {
         let mut env = Environment::new();
         env.define("x".to_string(), Value::Number(5.0));
 
-        let tokens = tokenize("x + 3;").unwrap();
+        let tokens = tokenize("x + 3").unwrap();
         let ast = parse(tokens);
         let result = eval_with_env(ast, &mut env).unwrap();
         assert_eq!(result, Value::Number(8.0));
@@ -402,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_if_expr_eval() {
-        let tokens = tokenize("if 1 < 2 {3}; else {4};").unwrap();
+        let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(3.0));
@@ -424,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_type_mismatch() {
-        let tokens = tokenize("if 1 + true {2}; else {3};").unwrap();
+        let tokens = tokenize("if 1 + true {2} else {3}").unwrap();
         let ast = parse(tokens);
         assert!(eval(ast).is_err());
     }
@@ -492,10 +505,10 @@ mod tests {
                 x = x + 1;
                 while y < 3 {
                     y = y + 1;
-                };
+                }
             };
             y
-        };",
+        }",
         )
         .unwrap();
         let ast = parse(tokens);
@@ -509,5 +522,21 @@ mod tests {
         let ast = parse(tokens);
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(3.0));
+    }
+
+    #[test]
+    fn test_function_return() {
+        let tokens = tokenize("fn add(a, b) { return a + b; }; add(2, 3)").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(5.0));
+    }
+
+    #[test]
+    fn test_early_return() {
+        let tokens = tokenize("fn test() { return 10; 20; }; test()").unwrap();
+        let ast = parse(tokens);
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(10.0));
     }
 }

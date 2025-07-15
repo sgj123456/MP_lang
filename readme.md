@@ -30,8 +30,8 @@ Mp中没有`null`，只有`nil`。
 | `expr1 == expr2` | 等于 |
 | `expr1!= expr2` | 不等于 |
 | `{expr1; expr2;...; exprn;}`| 语句块 |
-| `if (expr) { expr1; } else { expr2; }` | 条件判断 |
-| `while (expr) { expr1; }` | 循环 |
+| `if (expr1) expr2 else expr3` | 条件判断 |
+| `while (expr1) expr2` | 循环 |
 ### 变量声明
 ```
 let a = 10;

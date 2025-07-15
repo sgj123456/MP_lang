@@ -6,11 +6,12 @@ use crate::lexer::Token;
 pub enum Expr {
     Number(f64),
     Boolean(bool),
+    String(String),
     Variable(String),
     If {
         condition: Box<Expr>,
-        then_branch: Vec<Stmt>,
-        else_branch: Option<Vec<Stmt>>,
+        then_branch: Box<Expr>,
+        else_branch: Option<Box<Expr>>,
     },
     Block(Vec<Stmt>),
     BinaryOp {
@@ -45,5 +46,5 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     Result(Expr),
-    Return(Expr),
+    Return(Option<Expr>),
 }

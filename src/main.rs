@@ -19,8 +19,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut env = interpreter::Environment::new();
         let tokens = lexer::tokenize(&content)?;
         let ast = parser::parse(tokens);
-        let result = interpreter::eval_with_env(ast, &mut env)?;
-        dbg!(result);
+        let result = interpreter::eval_with_env(ast, &mut env);
+        match result {
+            Ok(value) | Err(interpreter::InterpreterError::Return(value)) => {
+                println!("=> {value:?}")
+            }
+            Err(e) => eprintln!("执行错误: {e}"),
+        }
         return Ok(());
     }
 

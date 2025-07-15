@@ -21,29 +21,39 @@ impl Parser {
         }
         statements
     }
-
-    fn statement(&mut self) -> Stmt {
+    fn delete_empty_statements(&mut self) {
         while self.match_token(&Token::Semicolon) || self.match_token(&Token::Newline) {}
+    }
+    fn statement(&mut self) -> Stmt {
+        self.delete_empty_statements();
         let stmt = if self.match_token(&Token::Let) {
             self.let_statement()
         } else if self.match_token(&Token::Fn) {
             self.function_statement()
+        } else if self.match_token(&Token::Return) {
+            let value = if !self.check(&Token::Semicolon) && !self.check(&Token::Newline) {
+                Some(self.expression())
+            } else {
+                None
+            };
+            Stmt::Return(value)
         } else {
             let expr = self.expression();
-            if !self.check(&Token::Semicolon) && self.check(&Token::RightBrace) {
+            if !self.check(&Token::Semicolon)
+                && (self.is_at_last_line() || self.is_at_block_last_line())
+            {
                 Stmt::Result(expr)
             } else {
                 Stmt::Expr(expr)
             }
         };
-        if !self.is_at_end()
-            && !self.is_at_block_end()
-            && !self.check(&Token::Semicolon)
-            && !self.check(&Token::Newline)
+        if !self.is_at_last_line()
+            && !self.is_at_block_last_line()
+            && !self.match_token(&Token::Semicolon)
         {
             panic!("Expect ';' or newline after expression");
         }
-        while self.match_token(&Token::Semicolon) || self.match_token(&Token::Newline) {}
+        self.delete_empty_statements();
         stmt
     }
 
@@ -76,14 +86,13 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        let expr = if self.match_token(&Token::If) {
+        if self.match_token(&Token::If) {
             self.if_expression()
         } else if self.match_token(&Token::While) {
             self.while_expression()
         } else {
             self.assignment()
-        };
-        expr
+        }
     }
 
     fn assignment(&mut self) -> Expr {
@@ -186,68 +195,63 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Expr {
-        if let Token::Identifier(name) = &self.tokens[self.current] {
-            let name = name.clone();
-            self.advance();
+        if self.is_at_end() {
+            panic!("Unexpected end of input")
+        }
+        match self.current_token() {
+            Token::Number(n) => {
+                let num = *n;
+                self.advance();
+                Expr::Number(num)
+            }
+            Token::Boolean(b) => {
+                let val = *b;
+                self.advance();
+                Expr::Boolean(val)
+            }
+            Token::String(s) => {
+                let s = s.clone();
+                self.advance();
+                Expr::String(s)
+            }
+            Token::Identifier(name) => {
+                let name = name.clone();
+                self.advance();
 
-            if self.match_token(&Token::LeftParen) {
-                let mut args = Vec::new();
-                if !self.match_token(&Token::RightParen) {
-                    loop {
-                        args.push(self.expression());
-                        if !self.match_token(&Token::Comma) {
-                            break;
+                if self.match_token(&Token::LeftParen) {
+                    let mut args = Vec::new();
+                    if !self.match_token(&Token::RightParen) {
+                        loop {
+                            args.push(self.expression());
+                            if !self.match_token(&Token::Comma) {
+                                break;
+                            }
                         }
+                        self.consume(&Token::RightParen, "Expect ')' after arguments");
                     }
-                    self.consume(&Token::RightParen, "Expect ')' after arguments");
+                    return Expr::FunctionCall { name, args };
                 }
-                return Expr::FunctionCall { name, args };
+                Expr::Variable(name)
             }
-            return Expr::Variable(name);
-        }
-
-        if !self.is_at_end() {
-            match &self.tokens[self.current] {
-                Token::Number(n) => {
-                    let num = *n;
-                    self.advance();
-                    return Expr::Number(num);
+            Token::LeftParen => {
+                self.advance();
+                let expr = self.expression();
+                self.consume(&Token::RightParen, "Expect ')' after expression");
+                expr
+            }
+            Token::LeftBrace => {
+                self.advance();
+                let mut statements = Vec::new();
+                while !self.check(&Token::RightBrace) && !self.is_at_end() {
+                    statements.push(self.statement());
                 }
-                Token::Boolean(b) => {
-                    let val = *b;
-                    self.advance();
-                    return Expr::Boolean(val);
-                }
-                Token::Identifier(name) => {
-                    let name = name.clone();
-                    self.advance();
-                    return Expr::Variable(name);
-                }
-                _ => {}
+                self.consume(&Token::RightBrace, "Expect '}' after block");
+                Expr::Block(statements)
+            }
+            _ => {
+                panic!("Unexpected token: {:?}", self.previous());
             }
         }
-
-        if self.match_token(&Token::LeftParen) {
-            let expr = self.expression();
-            self.consume(&Token::RightParen, "Expect ')' after expression");
-            return expr;
-        }
-
-        if self.match_token(&Token::LeftBrace) {
-            let mut statements = Vec::new();
-            while !self.check(&Token::RightBrace) && !self.is_at_end() {
-                statements.push(self.statement());
-            }
-            self.consume(&Token::RightBrace, "Expect '}' after block");
-            return Expr::Block(statements);
-        }
-
-        let current_token = if self.is_at_end() {
-            "end of input".to_string()
-        } else {
-            format!("{:?}", self.tokens[self.current])
-        };
-        panic!("Expect expression, found {current_token}");
     }
 
     fn match_token(&mut self, token: &Token) -> bool {
@@ -259,11 +263,15 @@ impl Parser {
         }
     }
 
+    fn current_token(&self) -> &Token {
+        &self.tokens[self.current]
+    }
+
     fn check(&self, token: &Token) -> bool {
         if self.is_at_end() {
             false
         } else {
-            &self.tokens[self.current] == token
+            self.current_token() == token
         }
     }
 
@@ -278,8 +286,33 @@ impl Parser {
         self.current >= self.tokens.len() || self.tokens[self.current] == Token::Eof
     }
 
-    fn is_at_block_end(&self) -> bool {
-        self.check(&Token::RightBrace)
+    fn is_at_last_line(&self) -> bool {
+        !self.find(&Token::Newline)
+    }
+    fn is_at_block_last_line(&self) -> bool {
+        self.find(&Token::RightBrace) && !self.find_before(&Token::Newline, &Token::RightBrace)
+    }
+
+    fn find(&self, token: &Token) -> bool {
+        for i in self.current..self.tokens.len() {
+            if self.tokens[i] == *token {
+                return true;
+            }
+        }
+        false
+    }
+    fn find_before(&self, token: &Token, before_token: &Token) -> bool {
+        let mut found = false;
+        for i in (self.current - 1)..=0 {
+            if self.tokens[i] == *token {
+                found = true;
+                break;
+            }
+            if self.tokens[i] == *before_token {
+                return false;
+            }
+        }
+        found
     }
 
     fn previous(&self) -> &Token {
@@ -296,10 +329,10 @@ impl Parser {
 
     fn if_expression(&mut self) -> Expr {
         let condition = Box::new(self.expression());
-        let then_branch = vec![self.statement()];
+        let then_branch = Box::new(self.expression());
 
         let else_branch = if self.match_token(&Token::Else) {
-            Some(vec![self.statement()])
+            Some(Box::new(self.expression()))
         } else {
             None
         };
@@ -358,7 +391,7 @@ mod tests {
     fn test_number_expr() {
         let tokens = tokenize("123").unwrap();
         let ast = parse(tokens);
-        assert_eq!(ast, vec![Stmt::Expr(Expr::Number(123.0))]);
+        assert_eq!(ast, vec![Stmt::Result(Expr::Number(123.0))]);
     }
 
     #[test]
@@ -367,7 +400,7 @@ mod tests {
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::Expr(Expr::BinaryOp {
+            vec![Stmt::Result(Expr::BinaryOp {
                 left: Box::new(Expr::Number(1.0)),
                 op: Token::Plus,
                 right: Box::new(Expr::Number(2.0))
@@ -390,22 +423,18 @@ mod tests {
 
     #[test]
     fn test_if_expr() {
-        let tokens = tokenize("if 1 < 2 {3}; else {4};").unwrap();
+        let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::Expr(Expr::If {
+            vec![Stmt::Result(Expr::If {
                 condition: Box::new(Expr::BinaryOp {
                     left: Box::new(Expr::Number(1.0)),
                     op: Token::LessThan,
                     right: Box::new(Expr::Number(2.0))
                 }),
-                then_branch: vec![Stmt::Expr(Expr::Block(vec![Stmt::Result(Expr::Number(
-                    3.0
-                ))]))],
-                else_branch: Some(vec![Stmt::Expr(Expr::Block(vec![Stmt::Result(
-                    Expr::Number(4.0)
-                )]))])
+                then_branch: Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(3.0))])),
+                else_branch: Some(Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(4.0))])))
             })]
         );
     }
@@ -416,7 +445,7 @@ mod tests {
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::Expr(Expr::BinaryOp {
+            vec![Stmt::Result(Expr::BinaryOp {
                 left: Box::new(Expr::Number(1.0)),
                 op: Token::Plus,
                 right: Box::new(Expr::BinaryOp {
@@ -452,7 +481,7 @@ mod tests {
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::Expr(Expr::FunctionCall {
+            vec![Stmt::Result(Expr::FunctionCall {
                 name: "add".to_string(),
                 args: vec![Expr::Number(1.0), Expr::Number(2.0)]
             })]
@@ -465,7 +494,7 @@ mod tests {
         let ast = parse(tokens);
         assert_eq!(
             ast,
-            vec![Stmt::Expr(Expr::FunctionCall {
+            vec![Stmt::Result(Expr::FunctionCall {
                 name: "add".to_string(),
                 args: vec![
                     Expr::Number(1.0),
@@ -528,7 +557,7 @@ mod tests {
                     op: Token::Plus,
                     right: Box::new(Expr::Number(2.0))
                 }),
-                Stmt::Expr(Expr::BinaryOp {
+                Stmt::Result(Expr::BinaryOp {
                     left: Box::new(Expr::Number(3.0)),
                     op: Token::Multiply,
                     right: Box::new(Expr::Number(4.0))
