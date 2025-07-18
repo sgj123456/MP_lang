@@ -1,6 +1,6 @@
 // 抽象语法树节点定义
 
-use crate::lexer::TokenKind;
+use crate::lexer::token::TokenKind;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {

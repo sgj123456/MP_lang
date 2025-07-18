@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt},
-    lexer::{Token, TokenKind},
+    lexer::{token::Token, token::TokenKind},
 };
 
 pub struct Parser {
