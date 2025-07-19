@@ -15,6 +15,12 @@ impl Parser {
 
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statements = Vec::new();
+        self.tokens = self
+            .tokens
+            .iter()
+            .filter(|token| !matches!(token.kind, TokenKind::Comment(_)))
+            .cloned()
+            .collect();
         while !self.is_at_end() {
             let stmt = self.statement();
             statements.push(stmt);

@@ -83,19 +83,19 @@ mod tests {
     fn test_comments() {
         // 测试单行注释
         let tokens = tokenize("// 这是一个注释\n123").unwrap();
-        assert_eq!(tokens[1].kind, TokenKind::Number(123.0));
-        assert_eq!(tokens[1].span, Span { line: 2, column: 1 });
-        assert_eq!(tokens[2].kind, TokenKind::Eof);
+        assert_eq!(tokens[2].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[2].span, Span { line: 2, column: 1 });
+        assert_eq!(tokens[3].kind, TokenKind::Eof);
 
         // 测试注释后的代码
         let tokens = tokenize("123 // 数字\n+ 456").unwrap();
         assert_eq!(tokens[0].kind, TokenKind::Number(123.0));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
-        assert_eq!(tokens[2].kind, TokenKind::Plus);
-        assert_eq!(tokens[2].span, Span { line: 2, column: 1 });
-        assert_eq!(tokens[3].kind, TokenKind::Number(456.0));
-        assert_eq!(tokens[3].span, Span { line: 2, column: 3 });
-        assert_eq!(tokens[4].kind, TokenKind::Eof);
+        assert_eq!(tokens[3].kind, TokenKind::Plus);
+        assert_eq!(tokens[3].span, Span { line: 2, column: 1 });
+        assert_eq!(tokens[4].kind, TokenKind::Number(456.0));
+        assert_eq!(tokens[4].span, Span { line: 2, column: 3 });
+        assert_eq!(tokens[5].kind, TokenKind::Eof);
 
         // 测试多行注释
         let tokens = tokenize("123 /* 多行\n注释 */ 456").unwrap();
