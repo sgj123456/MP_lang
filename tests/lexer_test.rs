@@ -83,6 +83,8 @@ mod tests {
     fn test_comments() {
         // 测试单行注释
         let tokens = tokenize("// 这是一个注释\n123").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Comment(" 这是一个注释".into()));
+        assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[2].kind, TokenKind::Number(123.0));
         assert_eq!(tokens[2].span, Span { line: 2, column: 1 });
         assert_eq!(tokens[3].kind, TokenKind::Eof);
