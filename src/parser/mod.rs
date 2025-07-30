@@ -275,35 +275,34 @@ impl Parser {
             TokenKind::LeftBrace => {
                 self.advance();
                 // Check if this is an object by looking for key: value pattern
-                if let TokenKind::String(_) = &self.peek().kind {
-                    if let Some(Token {
+                if let TokenKind::String(_) = &self.peek().kind
+                    && let Some(Token {
                         kind: TokenKind::Colon,
                         ..
                     }) = self.peek_next()
-                    {
-                        // Parse as object
-                        let mut properties = Vec::new();
-                        while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
-                            let key = if let TokenKind::String(name) = &self.peek().kind {
-                                name.clone()
-                            } else {
-                                return Err(ParserError::new(
-                                    error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
-                                    "Expect property name",
-                                ));
-                            };
-                            self.advance();
-                            self.consume(&TokenKind::Colon, "Expect ':' after property name")?;
-                            let value = self.expression()?;
-                            properties.push((key, value));
+                {
+                    // Parse as object
+                    let mut properties = Vec::new();
+                    while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
+                        let key = if let TokenKind::String(name) = &self.peek().kind {
+                            name.clone()
+                        } else {
+                            return Err(ParserError::new(
+                                error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
+                                "Expect property name",
+                            ));
+                        };
+                        self.advance();
+                        self.consume(&TokenKind::Colon, "Expect ':' after property name")?;
+                        let value = self.expression()?;
+                        properties.push((key, value));
 
-                            if !self.match_token(&TokenKind::Comma) {
-                                break;
-                            }
+                        if !self.match_token(&TokenKind::Comma) {
+                            break;
                         }
-                        self.consume(&TokenKind::RightBrace, "Expect '}' after object properties")?;
-                        return Ok(Expr::Object(properties));
                     }
+                    self.consume(&TokenKind::RightBrace, "Expect '}' after object properties")?;
+                    return Ok(Expr::Object(properties));
                 }
 
                 // Default to block parsing
