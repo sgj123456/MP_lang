@@ -1,55 +1,130 @@
 # Mp programming language
-## keywords
-| 关键字 | 说明 |
-| --- | --- |
-| `if` | 条件判断 |
-| `else` | 条件判断 |
-| `while` | 循环 |
-| `let` | 变量声明 |
-## 语法
-Mp中没有`null`，只有`nil`。
 
-### 语句
-在Mp中，任何语句的值都是`nil`，且不能被赋值给变量。
-| 语句 | 说明 |
-| --- | --- |
-|`let a = 10;` | 变量声明 |
-| `fn add(a, b) { return a + b; }` | 函数定义 |
-| `1+1;` | 以分号结尾的表达式 |
-单独成行的[表达式](#表达式)的结尾会自动加上分号变成语句。
-位于块表达式最后一行的表达式会自动包装为`return`语句。
-### 表达式
-任何表达式都有值（可能为`nil`）
-| 表达式 | 说明 |
-| --- | --- |
-| `expr1 + expr2` | 加法 |
-| `expr1 - expr2` | 减法 |
-| `expr1 * expr2` | 乘法 |
-| `expr1 / expr2` | 除法 |
-| `expr1 % expr2` | 取模 |
-| `expr1 == expr2` | 等于 |
-| `expr1!= expr2` | 不等于 |
-| `{expr1; expr2;...; exprn;}`| 语句块 |
-| `if (expr1) expr2 else expr3` | 条件判断 |
-| `while (expr1) expr2` | 循环 |
-### 变量声明
+## Introduction
+
+Mp is a simple programming language that is designed to be easy to learn and
+use. It is a dynamically-typed language with a focus on simplicity and
+readability.
+
+## Syntax
+
+### Keywords
+
+| Keyword | Description           |
+| ------- | --------------------- |
+| `if`    | conditional statement |
+| `else`  | conditional statement |
+| `while` | loop statement        |
+| `let`   | variable declaration  |
+| `fn`    | function definition   |
+
+### Data types
+
+| Type     | Description                             | Implemented | Example                          |
+| -------- | --------------------------------------- | ----------- | -------------------------------- |
+| ---      | ---                                     | ---         | ---                              |
+| Number   | integer or float                        | Yes         | `10`, `3.14`                     |
+| String   | sequence of characters                  | Yes         | `"hello world"`                  |
+| Boolean  | true or false                           | Yes         | `true`, `false`                  |
+| Vector   | ordered collection of values            | Yes         | `[1, 2, 3]`                      |
+| Map      | unordered collection of key-value pairs | No          | `{ "name": "Alice", "age": 25 }` |
+| Function | user-defined function                   | Yes         | `fn add(a, b) { return a + b; }` |
+| Nil      | empty value                             | Yes         | `nil`                            |
+
+### Operators
+
+| Operator | Description              | Implemented |
+| -------- | ------------------------ | ----------- |
+| `+`      | addition                 | Yes         |
+| `-`      | subtraction              | Yes         |
+| `*`      | multiplication           | Yes         |
+| `/`      | division                 | Yes         |
+| `%`      | modulo                   | No          |
+| `==`     | equal                    | Yes         |
+| `!=`     | not equal                | Yes         |
+| `>`      | greater than             | Yes         |
+| `<`      | less than                | Yes         |
+| `>=`     | greater than or equal to | Yes         |
+| `<=`     | less than or equal to    | Yes         |
+
+### Built-in functions
+
+| Function      | Description                              | Implemented |
+| ------------- | ---------------------------------------- | ----------- |
+| `print(expr)` | print the value of `expr` to the console | Yes         |
+| `input()`     | read a string from the console           | Yes         |
+| `len(str)`    | return the length of `str`               | Yes         |
+| `int(str)`    | convert `str` to an integer              | No          |
+| `float(str)`  | convert `str` to a float                 | No          |
+| `str(num)`    | convert `num` to a string                | No          |
+| `type(expr)`  | return the type of `expr` as a string    | No          |
+
+### Statements
+
+In Mp, any statement has a value of `nil` and cannot be assigned to a variable.
+
+| Statement                                                                                         | Description           |
+| ------------------------------------------------------------------------------------------------- | --------------------- |
+| `let a = 10;`                                                                                     | variable declaration  |
+| `fn add(a, b) { return a + b; }`                                                                  | function definition   |
+| `1+1;`                                                                                            | expression statement  |
+| `if (a > 10) { print("a is greater than 10"); } else { print("a is less than or equal to 10"); }` | conditional statement |
+| `while (i < 10) { print(i); i = i + 1; }`                                                         | loop statement        |
+
+- single-line [expressions](#Expressions) are also statements.
+- The last expression in a block expression is automatically wrapped in a
+  `return` statement.
+
+### Expressions
+
+Any expression has a value (which can be `nil`).
+
+| Expression                    | Description      |
+| ----------------------------- | ---------------- |
+| `expr1 + expr2`               | addition         |
+| `expr1 - expr2`               | subtraction      |
+| `expr1 * expr2`               | multiplication   |
+| `expr1 / expr2`               | division         |
+| `expr1 % expr2`               | modulo           |
+| `expr1 == expr2`              | equal            |
+| `expr1 != expr2`              | not equal        |
+| `{expr1; expr2; ...; exprn;}` | block expression |
+
+## Examples
+
+[examples/example.mp](examples/example.mp)
+
+### Comments
+
+```
+// This is a single-line comment
+
+/*
+This is a
+multi-line comment
+*/
+```
+
+### Variable declaration
+
 ```
 let a = 10;
 ```
-### 条件判断
+
+### Function definition
+
 ```
-if (a > 10) {
-    print("a is greater than 10");
-} else {
-    print("a is less than or equal to 10");
+fn add(a, b) {
+    return a + b;
 }
 ```
-### 循环
+
+### Block expression
+
 ```
-let i = 0;
-while (i < 10) {
-    print(i);
-    i = i + 1;
+{
+    let a = 10;
+    let b = 20;
+    return a + b;
 }
 ```
-`tip`：while循环将返回一个Vector，包含循环体的最后一个表达式的值。
