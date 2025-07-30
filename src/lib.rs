@@ -6,7 +6,7 @@ use rustyline::{Config, Editor, error::ReadlineError, history::FileHistory};
 use std::{fs, result::Result};
 
 use crate::runtime::{
-    environment::Environment, error::interpreter_error::InterpreterError, eval::eval_with_env,
+    environment::Environment, error::InterpreterError, eval::eval_with_env,
 };
 
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {

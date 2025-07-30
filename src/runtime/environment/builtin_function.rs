@@ -1,4 +1,4 @@
-use crate::runtime::{environment::value::Value, error::interpreter_error::InterpreterError};
+use crate::runtime::{environment::value::Value, error::InterpreterError};
 
 #[derive(Debug, Clone)]
 pub enum BuiltinFunction {

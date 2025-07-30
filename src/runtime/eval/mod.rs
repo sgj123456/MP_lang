@@ -3,7 +3,7 @@ use crate::{
     parser::ast::{Expr, Stmt},
     runtime::{
         environment::{Environment, environment_value::EnvironmentValue, value::Value},
-        error::interpreter_error::InterpreterError,
+        error::InterpreterError,
     },
 };
 
