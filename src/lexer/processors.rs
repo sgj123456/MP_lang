@@ -9,12 +9,21 @@ pub trait TokenProcessor {
 pub struct WhitespaceProcessor;
 impl TokenProcessor for WhitespaceProcessor {
     fn process(&self, lexer: &mut Lexer) -> Result<Option<Token>, LexerError> {
-        if let Some(' ' | '\t' | '\r') = lexer.peek() {
+        while let Some(' ' | '\t' | '\r') = lexer.peek() {
             lexer.next();
-            Ok(None)
-        } else {
-            Ok(None)
         }
+        Ok(None)
+    }
+}
+
+pub struct UnexpectedCharProcessor;
+impl TokenProcessor for UnexpectedCharProcessor {
+    fn process(&self, lexer: &mut Lexer) -> Result<Option<Token>, LexerError> {
+        let span = lexer.span();
+        let Some(c) = lexer.peek() else {
+            return Ok(None);
+        };
+        Err(LexerError::UnexpectedChar(c, span))
     }
 }
 

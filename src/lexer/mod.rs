@@ -48,7 +48,7 @@ impl Lexer {
         }
     }
 
-    fn processors() -> [Box<dyn TokenProcessor>; 8] {
+    fn processors() -> [Box<dyn TokenProcessor>; 9] {
         [
             Box::new(WhitespaceProcessor),
             Box::new(NewlineProcessor),
@@ -58,6 +58,7 @@ impl Lexer {
             Box::new(OperatorProcessor),
             Box::new(IdentifierProcessor),
             Box::new(SymbolProcessor),
+            Box::new(UnexpectedCharProcessor),
         ]
     }
 
@@ -86,9 +87,8 @@ impl Lexer {
 
     pub fn tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
-
         while self.position < self.input.len() {
-            for processor in Self::processors().iter() {
+            for processor in Self::processors() {
                 if let Some(token) = processor.process(self)? {
                     tokens.push(token);
                     break;

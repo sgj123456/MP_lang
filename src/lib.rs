@@ -5,9 +5,7 @@ pub mod runtime;
 use rustyline::{Config, Editor, error::ReadlineError, history::FileHistory};
 use std::{fs, result::Result};
 
-use crate::runtime::{
-    environment::Environment, error::InterpreterError, eval::eval_with_env,
-};
+use crate::runtime::{environment::Environment, error::InterpreterError, eval::eval_with_env};
 
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(filename)?;
