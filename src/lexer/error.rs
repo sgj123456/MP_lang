@@ -21,7 +21,9 @@ impl fmt::Display for LexerError {
             LexerError::UnexpectedChar(c, span) => write!(f, "{span}: Unexpected character: '{c}'"),
             LexerError::UnclosedString(span) => write!(f, "{span}: Unclosed string"),
             LexerError::UnclosedComment(span) => write!(f, "{span}: Unclosed comment"),
-            LexerError::InvalidEscape(c, span) => write!(f, "{span}: Invalid escape sequence: '{c}'"),
+            LexerError::InvalidEscape(c, span) => {
+                write!(f, "{span}: Invalid escape sequence: '{c}'")
+            }
         }
     }
 }

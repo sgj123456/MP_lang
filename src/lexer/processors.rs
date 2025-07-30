@@ -77,7 +77,7 @@ impl TokenProcessor for StringProcessor {
     fn process(&self, lexer: &mut Lexer) -> Result<Option<Token>, LexerError> {
         let span = lexer.span();
         if let Some('"') = lexer.peek() {
-            lexer.next(); // 跳过开始引号
+            lexer.next();
             let mut s = String::new();
             let mut escaped = false;
             let mut closed = false;
@@ -97,7 +97,7 @@ impl TokenProcessor for StringProcessor {
                     escaped = true;
                 } else if c == '"' {
                     closed = true;
-                    lexer.next(); // 跳过结束引号
+                    lexer.next();
                     break;
                 } else {
                     s.push(c);

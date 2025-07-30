@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::parser::ast::Expr;
 use crate::runtime::environment::environment_value::EnvironmentValue;
 
+pub mod builtin_function;
 pub mod environment_value;
 pub mod value;
-pub mod builtin_function;
 
 use crate::runtime::environment::builtin_function::BuiltinFunction;
 

@@ -4,7 +4,7 @@ mod tests {
         lexer::tokenize,
         parser::parse,
         runtime::{
-            environment::{value::Value, Environment},
+            environment::{Environment, value::Value},
             eval::{eval, eval_with_env},
         },
     };

@@ -17,7 +17,7 @@ pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
         Ok(value) | Err(InterpreterError::Return(value)) => {
             println!("=> {value:?}")
         }
-        Err(e) => eprintln!("执行错误: {e}"),
+        Err(e) => eprintln!("Execution error: {e}"),
     }
     Ok(())
 }
@@ -26,38 +26,37 @@ pub fn handle_command(cmd: &str, env: &mut Environment) -> bool {
     match cmd {
         "exit" => return false,
         "help" => {
-            println!("可用命令:");
-            println!("  exit     - 退出交互模式");
-            println!("  help     - 显示帮助信息");
-            println!("  clear    - 清空环境变量");
-            println!("  其他输入 - 执行Mp代码");
+            println!("Available commands:");
+            println!("  exit     - exit the program");
+            println!("  help     - display this help message");
+            println!("  clear    - clear the environment");
         }
         "clear" => {
             *env = Environment::new();
-            println!("环境已清空");
+            println!("Environment cleared.");
         }
         _ => match lexer::tokenize(cmd) {
             Ok(tokens) => {
                 let ast = match parser::parse(tokens) {
                     Ok(ast) => ast,
                     Err(e) => {
-                        eprintln!("语法分析错误: {e}");
+                        eprintln!("Grammar error: {e}");
                         return true;
                     }
                 };
                 match eval_with_env(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
-                    Err(e) => eprintln!("执行错误: {e}"),
+                    Err(e) => eprintln!("Execution error: {e}"),
                 }
             }
-            Err(e) => eprintln!("词法分析错误: {e}"),
+            Err(e) => eprintln!("Lexical error: {e}"),
         },
     }
     true
 }
 
 pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
-    println!("欢迎使用Mp语言! (输入help查看帮助)");
+    println!("Welcome to Mp Lang! (type 'help' for help)");
     let config = Config::builder().auto_add_history(true).build();
     let mut rl = Editor::<(), FileHistory>::with_config(config)?;
     let mut env = Environment::new();
@@ -77,14 +76,14 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("使用Ctrl-D退出");
+                println!("Using `Ctrl-D` to exit.");
             }
             Err(ReadlineError::Eof) => {
-                println!("再见!");
+                println!("Goodbye!");
                 break;
             }
             Err(err) => {
-                eprintln!("读取错误: {err:?}");
+                eprintln!("Read error: {err:?}");
                 break;
             }
         }

@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_nested_function_call() {
-        let tokens = tokenize("add(1, mul(2, 3))").unwrap();
+        let tokens = tokenize("add(1, multiply(2, 3))").unwrap();
         let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
@@ -118,7 +118,7 @@ mod tests {
                 args: vec![
                     Expr::Number(1.0),
                     Expr::FunctionCall {
-                        name: "mul".to_string(),
+                        name: "multiply".to_string(),
                         args: vec![Expr::Number(2.0), Expr::Number(3.0)]
                     }
                 ]
