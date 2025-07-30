@@ -26,8 +26,8 @@ readability.
 | Number   | integer or float                        | Yes         | `10`, `3.14`                     |
 | String   | sequence of characters                  | Yes         | `"hello world"`                  |
 | Boolean  | true or false                           | Yes         | `true`, `false`                  |
-| Vector   | ordered collection of values            | Yes         | `[1, 2, 3]`                      |
-| Map      | unordered collection of key-value pairs | No          | `{ "name": "Alice", "age": 25 }` |
+| Array    | ordered collection of values            | Yes         | `[1, 2, 3]`                      |
+| Object   | unordered collection of key-value pairs | No          | `{ "name": "Alice", "age": 25 }` |
 | Function | user-defined function                   | Yes         | `fn add(a, b) { return a + b; }` |
 | Nil      | empty value                             | Yes         | `nil`                            |
 
