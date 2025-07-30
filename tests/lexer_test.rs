@@ -23,6 +23,56 @@ mod tests {
     }
 
     #[test]
+    fn test_string() {
+        let tokens = tokenize("\"hello\" \"world\"").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::String("hello".to_string()));
+        assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
+        assert_eq!(tokens[1].kind, TokenKind::String("world".to_string()));
+        assert_eq!(tokens[1].span, Span { line: 1, column: 9 });
+        assert_eq!(tokens[2].kind, TokenKind::Eof);
+    }
+
+    #[test]
+    fn test_punctuation() {
+        let tokens = tokenize(", ; ( ) [ ] { }").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Comma);
+        assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
+        assert_eq!(tokens[1].kind, TokenKind::Semicolon);
+        assert_eq!(tokens[1].span, Span { line: 1, column: 3 });
+        assert_eq!(tokens[2].kind, TokenKind::LeftParen);
+        assert_eq!(tokens[2].span, Span { line: 1, column: 5 });
+        assert_eq!(tokens[3].kind, TokenKind::RightParen);
+        assert_eq!(tokens[3].span, Span { line: 1, column: 7 });
+        assert_eq!(tokens[4].kind, TokenKind::LeftBracket);
+        assert_eq!(tokens[4].span, Span { line: 1, column: 9 });
+        assert_eq!(tokens[5].kind, TokenKind::RightBracket);
+        assert_eq!(
+            tokens[5].span,
+            Span {
+                line: 1,
+                column: 11
+            }
+        );
+        assert_eq!(tokens[6].kind, TokenKind::LeftBrace);
+        assert_eq!(
+            tokens[6].span,
+            Span {
+                line: 1,
+                column: 13
+            }
+        );
+        assert_eq!(tokens[7].kind, TokenKind::RightBrace);
+        assert_eq!(
+            tokens[7].span,
+            Span {
+                line: 1,
+                column: 15
+            }
+        );
+        assert_eq!(tokens[8].kind, TokenKind::Eof);
+    }
+
+    #[test]
     fn test_operators() {
         let tokens = tokenize("+ - * /").unwrap();
         assert_eq!(tokens[0].kind, TokenKind::Plus);

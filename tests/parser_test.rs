@@ -14,6 +14,47 @@ mod tests {
     }
 
     #[test]
+    fn test_string_expr() {
+        let tokens = tokenize("\"hello\"").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(ast, vec![Stmt::Result(Expr::String("hello".to_string()))]);
+    }
+
+    #[test]
+    fn test_boolean_expr() {
+        let tokens = tokenize("true").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(ast, vec![Stmt::Result(Expr::Boolean(true))]);
+    }
+
+    #[test]
+    fn test_array_expr() {
+        let tokens = tokenize("[1, 2, 3]").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(
+            ast,
+            vec![Stmt::Result(Expr::Array(vec![
+                Expr::Number(1.0),
+                Expr::Number(2.0),
+                Expr::Number(3.0)
+            ]))]
+        );
+    }
+
+    #[test]
+    fn test_object_expr() {
+        let tokens = tokenize("{\"a\": 1, \"b\": 2}").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(
+            ast,
+            vec![Stmt::Result(Expr::Object(vec![
+                ("a".to_string(), Expr::Number(1.0)),
+                ("b".to_string(), Expr::Number(2.0))
+            ]))]
+        );
+    }
+
+    #[test]
     fn test_binary_op() {
         let tokens = tokenize("1 + 2").unwrap();
         let ast = parse(tokens).unwrap();

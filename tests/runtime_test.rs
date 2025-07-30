@@ -102,7 +102,7 @@ mod tests {
         let result = eval(ast).unwrap();
         assert_eq!(
             result,
-            Value::Vector(Vec::from([
+            Value::Array(Vec::from([
                 Value::Number(1.0),
                 Value::Number(2.0),
                 Value::Number(3.0)

@@ -6,6 +6,8 @@ pub enum Expr {
     Boolean(bool),
     String(String),
     Variable(String),
+    Array(Vec<Expr>),
+    Object(Vec<(String, Expr)>),
     If {
         condition: Box<Expr>,
         then_branch: Box<Expr>,

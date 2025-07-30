@@ -14,8 +14,8 @@ impl BuiltinFunction {
     pub fn call(&self, args: Vec<Value>) -> Result<Value, InterpreterError> {
         match self {
             BuiltinFunction::Print => {
-                for arg in args {
-                    print!("{arg} ");
+                for arguments in args {
+                    print!("{arguments} ");
                 }
                 println!();
                 Ok(Value::Nil)
@@ -24,7 +24,7 @@ impl BuiltinFunction {
                 Some(Value::Number(n)) => Ok(Value::Number(n.abs())),
                 Some(Value::Boolean(b)) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
                 Some(Value::Nil) => Ok(Value::Number(0.0)),
-                Some(Value::Vector(v)) => Ok(Value::Number(v.len() as f64)),
+                Some(Value::Array(v)) => Ok(Value::Number(v.len() as f64)),
                 _ => Err(InterpreterError::TypeMismatch(
                     "len() expects a number, boolean, nil or vector".to_string(),
                 )),
@@ -35,24 +35,24 @@ impl BuiltinFunction {
                     "toString() expects one argument".to_string(),
                 )),
             },
-            BuiltinFunction::Vector => Ok(Value::Vector(args)),
+            BuiltinFunction::Vector => Ok(Value::Array(args)),
             BuiltinFunction::Push => match args.as_slice() {
-                [Value::Vector(v), item] => {
+                [Value::Array(v), item] => {
                     let mut new_vec = v.clone();
                     new_vec.push(item.clone());
-                    Ok(Value::Vector(new_vec))
+                    Ok(Value::Array(new_vec))
                 }
                 _ => Err(InterpreterError::TypeMismatch(
                     "push() expects a vector and an item".to_string(),
                 )),
             },
             BuiltinFunction::Pop => match args.first() {
-                Some(Value::Vector(v)) if !v.is_empty() => {
+                Some(Value::Array(v)) if !v.is_empty() => {
                     let mut new_vec = v.clone();
                     let popped = new_vec.pop().unwrap();
                     Ok(popped)
                 }
-                Some(Value::Vector(_)) => Err(InterpreterError::InvalidOperation(
+                Some(Value::Array(_)) => Err(InterpreterError::InvalidOperation(
                     "Cannot pop from empty vector".to_string(),
                 )),
                 _ => Err(InterpreterError::TypeMismatch(

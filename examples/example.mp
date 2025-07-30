@@ -9,8 +9,9 @@ fn add(x, y) {
 let c = add(a, b)
 print(c)
 // return "Hello, world!" 'return' will instandly exit the function and return the value.
-let d = vector(1, 2, 3)
+let d = [1, 2, 3, 4, 5]
 print(d)
+let f = { "name": "John", "age": 30 }
 let e = while (a < 20) {
     a = a + 1
     print(a)

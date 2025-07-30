@@ -208,10 +208,13 @@ impl TokenProcessor for SymbolProcessor {
         let kind = match c {
             '(' => TokenKind::LeftParen,
             ')' => TokenKind::RightParen,
+            '[' => TokenKind::LeftBracket,
+            ']' => TokenKind::RightBracket,
             '{' => TokenKind::LeftBrace,
             '}' => TokenKind::RightBrace,
             ',' => TokenKind::Comma,
             ';' => TokenKind::Semicolon,
+            ':' => TokenKind::Colon,
             _ => return Ok(None),
         };
         lexer.next();

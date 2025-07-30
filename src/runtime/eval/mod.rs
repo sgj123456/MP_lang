@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     lexer::token::TokenKind,
     parser::ast::{Expr, Stmt},
@@ -178,8 +180,23 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
             if result.is_empty() {
                 Ok(Value::Nil)
             } else {
-                Ok(Value::Vector(result))
+                Ok(Value::Array(result))
             }
+        }
+        Expr::Array(values) => {
+            let evaluated_values = values
+                .iter()
+                .map(|value| eval_expr(value, env))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Value::Array(evaluated_values))
+        }
+        Expr::Object(vec) => {
+            let mut object = HashMap::new();
+            for (key, value) in vec {
+                let value = eval_expr(value, env)?;
+                object.insert(key.clone(), value);
+            }
+            Ok(Value::Object(object))
         }
     }
 }

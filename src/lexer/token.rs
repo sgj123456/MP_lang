@@ -42,13 +42,12 @@ pub enum TokenKind {
     LessThanOrEqual,
     LeftParen,
     RightParen,
-    #[allow(dead_code)]
     LeftBracket,
-    #[allow(dead_code)]
     RightBracket,
     LeftBrace,
     RightBrace,
     Semicolon,
+    Colon,
     Newline,
     Identifier(String),
     Let,
@@ -85,6 +84,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::LeftBrace => write!(f, "LeftBrace"),
             TokenKind::RightBrace => write!(f, "RightBrace"),
             TokenKind::Semicolon => write!(f, "Semicolon"),
+            TokenKind::Colon => write!(f, "Colon"),
             TokenKind::Newline => write!(f, "Newline"),
             TokenKind::Identifier(s) => write!(f, "Identifier({s})"),
             TokenKind::Let => write!(f, "Let"),

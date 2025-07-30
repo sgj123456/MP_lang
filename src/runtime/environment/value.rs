@@ -1,11 +1,12 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
-    Vector(Vec<Value>),
+    Array(Vec<Value>),
+    Object(HashMap<String, Value>),
     Nil,
 }
 
@@ -16,7 +17,7 @@ impl fmt::Display for Value {
             Value::Boolean(b) => write!(f, "{b}"),
             Value::String(s) => write!(f, "{s}"),
             Value::Nil => write!(f, "nil"),
-            Value::Vector(v) => {
+            Value::Array(v) => {
                 write!(f, "[")?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 {
@@ -25,6 +26,16 @@ impl fmt::Display for Value {
                     write!(f, "{item}")?;
                 }
                 write!(f, "]")
+            }
+            Value::Object(o) => {
+                write!(f, "{{")?;
+                for (i, (k, v)) in o.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{k}: {v}")?;
+                }
+                write!(f, "}}")
             }
         }
     }

@@ -18,6 +18,10 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
+    fn peek_next(&self) -> Option<&Token> {
+        self.tokens.get(self.current + 1)
+    }
+
     pub fn parse(&mut self) -> Result<Vec<Stmt>, ParserError> {
         let mut statements = Vec::new();
         self.tokens = self
@@ -67,7 +71,7 @@ impl Parser {
                 Stmt::Result(expr)
             } else {
                 return Err(ParserError::new(
-                    error::ParserErrorKind::UnexpectedToken(self.current().clone()),
+                    error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
                     "Unexpected token: {:?}. Expected a statement.",
                 ));
             }
@@ -78,7 +82,7 @@ impl Parser {
             && !self.is_at_block_last_not_empty_line()
             && !matches!(stmt, Stmt::Expr(_) | Stmt::Result(_))
         {
-            panic!("Unexpected token: {:?}", self.current())
+            panic!("Unexpected token: {:?}", self.peek())
         }
         self.delete_empty_statements();
         Ok(stmt)
@@ -227,7 +231,7 @@ impl Parser {
                 "Unexpected end of file. Expected expression.",
             ));
         }
-        let expr = match &self.current().kind {
+        let expr = match &self.peek().kind {
             TokenKind::Number(n) => {
                 let num = *n;
                 self.advance();
@@ -270,6 +274,39 @@ impl Parser {
             }
             TokenKind::LeftBrace => {
                 self.advance();
+                // Check if this is an object by looking for key: value pattern
+                if let TokenKind::String(_) = &self.peek().kind {
+                    if let Some(Token {
+                        kind: TokenKind::Colon,
+                        ..
+                    }) = self.peek_next()
+                    {
+                        // Parse as object
+                        let mut properties = Vec::new();
+                        while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
+                            let key = if let TokenKind::String(name) = &self.peek().kind {
+                                name.clone()
+                            } else {
+                                return Err(ParserError::new(
+                                    error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
+                                    "Expect property name",
+                                ));
+                            };
+                            self.advance();
+                            self.consume(&TokenKind::Colon, "Expect ':' after property name")?;
+                            let value = self.expression()?;
+                            properties.push((key, value));
+
+                            if !self.match_token(&TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                        self.consume(&TokenKind::RightBrace, "Expect '}' after object properties")?;
+                        return Ok(Expr::Object(properties));
+                    }
+                }
+
+                // Default to block parsing
                 let mut statements = Vec::new();
                 while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                     statements.push(self.statement()?);
@@ -277,8 +314,21 @@ impl Parser {
                 self.consume(&TokenKind::RightBrace, "Expect '}' after block")?;
                 Expr::Block(statements)
             }
+            TokenKind::LeftBracket => {
+                self.advance();
+                let mut elements = Vec::new();
+                while !self.check(&TokenKind::RightBracket) && !self.is_at_end() {
+                    elements.push(self.expression()?);
+                    if !self.match_token(&TokenKind::Comma) {
+                        break;
+                    }
+                }
+                self.consume(&TokenKind::RightBracket, "Expect ']' after array elements")?;
+                Expr::Array(elements)
+            }
+
             _ => {
-                let token = self.current();
+                let token = self.peek();
                 panic!(
                     "Unexpected token {:?} at {}:{}",
                     token.kind, token.span.line, token.span.column
@@ -297,7 +347,7 @@ impl Parser {
         }
     }
 
-    fn current(&self) -> &Token {
+    fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
 
@@ -305,7 +355,7 @@ impl Parser {
         if self.is_at_end() {
             false
         } else {
-            &self.current().kind == kind
+            &self.peek().kind == kind
         }
     }
 
@@ -314,7 +364,7 @@ impl Parser {
             self.advance();
             Ok(())
         } else {
-            let token = self.current();
+            let token = self.peek();
             Err(ParserError::new(
                 error::ParserErrorKind::UnexpectedToken(token.clone()),
                 message,
@@ -388,7 +438,7 @@ impl Parser {
             Ok(name.to_owned())
         } else {
             Err(ParserError::new(
-                error::ParserErrorKind::UnexpectedToken(self.current().clone()),
+                error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
                 "Expect identifier",
             ))
         }
