@@ -1,5 +1,5 @@
 use crate::{
-    ast::Expr,
+    parser::ast::Expr,
     runtime::environment::{builtin_function::BuiltinFunction, value::Value},
 };
 

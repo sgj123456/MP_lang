@@ -1,22 +1,22 @@
 #[cfg(test)]
 mod tests {
     use mp_lang::{
-        ast::{Expr, Stmt},
         lexer::{TokenKind, tokenize},
+        parser::ast::{Expr, Stmt},
         parser::parse,
     };
 
     #[test]
     fn test_number_expr() {
         let tokens = tokenize("123").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(ast, vec![Stmt::Result(Expr::Number(123.0))]);
     }
 
     #[test]
     fn test_binary_op() {
         let tokens = tokenize("1 + 2").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
@@ -30,7 +30,7 @@ mod tests {
     #[test]
     fn test_variable_decl() {
         let tokens = tokenize("let x = 5").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Let {
@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn test_if_expr() {
         let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::If {
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn test_operator_precedence() {
         let tokens = tokenize("1 + 2 * 3").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn test_function_decl() {
         let tokens = tokenize("fn add(a, b) { a + b }").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Function {
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_function_call() {
         let tokens = tokenize("add(1, 2)").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::FunctionCall {
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_nested_function_call() {
         let tokens = tokenize("add(1, mul(2, 3))").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::FunctionCall {
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_semicolon_separator() {
         let tokens = tokenize("let x = 1; let y = 2").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn test_multiple_semicolons() {
         let tokens = tokenize("let x = 1;;; let y = 2").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![
@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn test_semicolon_after_expr() {
         let tokens = tokenize("1 + 2; 3 * 4").unwrap();
-        let ast = parse(tokens);
+        let ast = parse(tokens).unwrap();
         assert_eq!(
             ast,
             vec![

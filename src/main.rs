@@ -1,5 +1,3 @@
-// 简单编程语言实现
-
 use mp_lang::{run_file, run_repl};
 use std::env;
 
