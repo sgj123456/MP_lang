@@ -2,7 +2,11 @@ pub mod lexer;
 pub mod parser;
 pub mod runtime;
 
-use rustyline::{Config, Editor, error::ReadlineError, history::FileHistory};
+use rustyline::{
+    Completer, Config, Editor, Helper, Highlighter, Hinter, Validator, error::ReadlineError,
+    highlight::MatchingBracketHighlighter, history::FileHistory,
+    validate::MatchingBracketValidator,
+};
 use std::{fs, result::Result};
 
 use crate::runtime::{environment::Environment, error::InterpreterError, eval::eval_with_env};
@@ -55,10 +59,22 @@ pub fn handle_command(cmd: &str, env: &mut Environment) -> bool {
     true
 }
 
+#[derive(Helper, Completer, Highlighter, Validator, Hinter)]
+struct InputValidator {
+    #[rustyline(Validator)]
+    brackets: MatchingBracketValidator,
+    #[rustyline(Highlighter)]
+    hightlighter: MatchingBracketHighlighter,
+}
+
 pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
     println!("Welcome to Mp Lang! (type 'help' for help)");
     let config = Config::builder().auto_add_history(true).build();
-    let mut rl = Editor::<(), FileHistory>::with_config(config)?;
+    let mut rl: Editor<InputValidator, FileHistory> = Editor::with_config(config)?;
+    rl.set_helper(Some(InputValidator {
+        brackets: MatchingBracketValidator::new(),
+        hightlighter: MatchingBracketHighlighter::new(),
+    }));
     let mut env = Environment::new();
 
     loop {

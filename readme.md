@@ -27,7 +27,7 @@ readability.
 | String   | sequence of characters                  | Yes         | `"hello world"`                  |
 | Boolean  | true or false                           | Yes         | `true`, `false`                  |
 | Array    | ordered collection of values            | Yes         | `[1, 2, 3]`                      |
-| Object   | unordered collection of key-value pairs | No          | `{ "name": "Alice", "age": 25 }` |
+| Object   | unordered collection of key-value pairs | Yes          | `{ "name": "Alice", "age": 25 }` |
 | Function | user-defined function                   | Yes         | `fn add(a, b) { return a + b; }` |
 | Nil      | empty value                             | Yes         | `nil`                            |
 
