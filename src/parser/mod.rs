@@ -233,7 +233,7 @@ impl Parser {
         }
         let expr = match &self.peek().kind {
             TokenKind::Number(n) => {
-                let num = *n;
+                let num = n.clone();
                 self.advance();
                 Expr::Number(num)
             }

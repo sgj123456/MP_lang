@@ -4,7 +4,10 @@ mod tests {
         lexer::tokenize,
         parser::parse,
         runtime::{
-            environment::{Environment, value::Value},
+            environment::{
+                Environment,
+                value::{Number, Value},
+            },
             eval::{eval, eval_with_env},
         },
     };
@@ -14,7 +17,7 @@ mod tests {
         let tokens = tokenize("123").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(123.0));
+        assert_eq!(result, Value::Number(Number::Int(123)));
     }
 
     #[test]
@@ -22,18 +25,18 @@ mod tests {
         let tokens = tokenize("1 + 2 * 3").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(7.0));
+        assert_eq!(result, Value::Number(Number::Int(7)));
     }
 
     #[test]
     fn test_variable_eval() {
         let mut env = Environment::new();
-        env.define("x".to_string(), Value::Number(5.0));
+        env.define("x".to_string(), Value::Number(Number::Int(5)));
 
         let tokens = tokenize("x + 3").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval_with_env(ast, &mut env).unwrap();
-        assert_eq!(result, Value::Number(8.0));
+        assert_eq!(result, Value::Number(Number::Int(8)));
     }
 
     #[test]
@@ -41,7 +44,7 @@ mod tests {
         let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(3.0));
+        assert_eq!(result, Value::Number(Number::Int(3)));
     }
 
     #[test]
@@ -84,7 +87,7 @@ mod tests {
         let tokens = tokenize("{ let x = 1; x + 2 }").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(3.0));
+        assert_eq!(result, Value::Number(Number::Int(3)));
     }
 
     #[test]
@@ -92,7 +95,7 @@ mod tests {
         let tokens = tokenize("{ let x = 1; { let x = 2; x } }").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(2.0));
+        assert_eq!(result, Value::Number(Number::Int(2)));
     }
 
     #[test]
@@ -103,9 +106,9 @@ mod tests {
         assert_eq!(
             result,
             Value::Array(Vec::from([
-                Value::Number(1.0),
-                Value::Number(2.0),
-                Value::Number(3.0)
+                Value::Number(Number::Int(1)),
+                Value::Number(Number::Int(2)),
+                Value::Number(Number::Int(3))
             ]))
         );
     }
@@ -136,15 +139,15 @@ mod tests {
         .unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(3.0))
+        assert_eq!(result, Value::Number(Number::Int(3)))
     }
 
     #[test]
     fn test_vector_operations() {
-        let tokens = tokenize("let v = vector(1, 2, 3); push(v, 4); pop(v)").unwrap();
+        let tokens = tokenize("let v = [1, 2, 3]; push(v, 4); pop(v)").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(3.0));
+        assert_eq!(result, Value::Number(Number::Int(3)));
     }
 
     #[test]
@@ -152,7 +155,7 @@ mod tests {
         let tokens = tokenize("fn add(a, b) { return a + b; }; add(2, 3)").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(5.0));
+        assert_eq!(result, Value::Number(Number::Int(5)));
     }
 
     #[test]
@@ -160,6 +163,6 @@ mod tests {
         let tokens = tokenize("fn test() { return 10; 20; }; test()").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(10.0));
+        assert_eq!(result, Value::Number(Number::Int(10)));
     }
 }

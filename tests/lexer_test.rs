@@ -1,13 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use mp_lang::lexer::{Span, TokenKind, tokenize};
+    use mp_lang::{
+        lexer::{Span, TokenKind, tokenize},
+        runtime::environment::value::Number,
+    };
 
     #[test]
     fn test_number() {
         let tokens = tokenize("123 45.67").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
-        assert_eq!(tokens[1].kind, TokenKind::Number(45.67));
+        assert_eq!(tokens[1].kind, TokenKind::Number(Number::Float(45.67)));
         assert_eq!(tokens[1].span, Span { line: 1, column: 5 });
         assert_eq!(tokens[2].kind, TokenKind::Eof);
     }
@@ -136,28 +139,28 @@ mod tests {
             TokenKind::Comment(" This is a comment.".into())
         );
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
-        assert_eq!(tokens[2].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[2].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[2].span, Span { line: 2, column: 1 });
         assert_eq!(tokens[3].kind, TokenKind::Eof);
 
         let tokens = tokenize("123 // This is a number.\n+ 456").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[3].kind, TokenKind::Plus);
         assert_eq!(tokens[3].span, Span { line: 2, column: 1 });
-        assert_eq!(tokens[4].kind, TokenKind::Number(456.0));
+        assert_eq!(tokens[4].kind, TokenKind::Number(Number::Int(456)));
         assert_eq!(tokens[4].span, Span { line: 2, column: 3 });
         assert_eq!(tokens[5].kind, TokenKind::Eof);
 
         let tokens = tokenize("123 /* This is a multi-line\ncomment */ 456").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(
             tokens[1].kind,
             TokenKind::Comment(" This is a multi-line\ncomment ".to_string())
         );
         assert_eq!(tokens[1].span, Span { line: 1, column: 5 });
-        assert_eq!(tokens[2].kind, TokenKind::Number(456.0));
+        assert_eq!(tokens[2].kind, TokenKind::Number(Number::Int(456)));
         assert_eq!(
             tokens[2].span,
             Span {
@@ -168,14 +171,14 @@ mod tests {
         assert_eq!(tokens[3].kind, TokenKind::Eof);
 
         let tokens = tokenize("123 /* let x = 5 */ 456").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(
             tokens[1].kind,
             TokenKind::Comment(" let x = 5 ".to_string())
         );
         assert_eq!(tokens[1].span, Span { line: 1, column: 5 });
-        assert_eq!(tokens[2].kind, TokenKind::Number(456.0));
+        assert_eq!(tokens[2].kind, TokenKind::Number(Number::Int(456)));
         assert_eq!(
             tokens[2].span,
             Span {
@@ -202,7 +205,7 @@ mod tests {
         assert_eq!(tokens[2].kind, TokenKind::Equal);
         assert_eq!(tokens[2].span, Span { line: 1, column: 7 });
 
-        assert_eq!(tokens[3].kind, TokenKind::Number(123.0));
+        assert_eq!(tokens[3].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[3].span, Span { line: 1, column: 9 });
 
         assert_eq!(tokens[5].kind, TokenKind::If);

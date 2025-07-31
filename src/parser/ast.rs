@@ -1,8 +1,8 @@
-use crate::lexer::token::TokenKind;
+use crate::{lexer::token::TokenKind, runtime::environment::value::Number};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Number(f64),
+    Number(Number),
     Boolean(bool),
     String(String),
     Variable(String),

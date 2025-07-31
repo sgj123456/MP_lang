@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::runtime::environment::value::Number;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
     pub line: usize,
@@ -25,7 +27,7 @@ impl fmt::Display for Token {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
-    Number(f64),
+    Number(Number),
     Boolean(bool),
     String(String),
     Comment(String),

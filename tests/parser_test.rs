@@ -2,15 +2,18 @@
 mod tests {
     use mp_lang::{
         lexer::{TokenKind, tokenize},
-        parser::ast::{Expr, Stmt},
-        parser::parse,
+        parser::{
+            ast::{Expr, Stmt},
+            parse,
+        },
+        runtime::environment::value::Number,
     };
 
     #[test]
     fn test_number_expr() {
         let tokens = tokenize("123").unwrap();
         let ast = parse(tokens).unwrap();
-        assert_eq!(ast, vec![Stmt::Result(Expr::Number(123.0))]);
+        assert_eq!(ast, vec![Stmt::Result(Expr::Number(Number::Int(123)))]);
     }
 
     #[test]
@@ -34,9 +37,9 @@ mod tests {
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::Array(vec![
-                Expr::Number(1.0),
-                Expr::Number(2.0),
-                Expr::Number(3.0)
+                Expr::Number(Number::Int(1)),
+                Expr::Number(Number::Int(2)),
+                Expr::Number(Number::Int(3))
             ]))]
         );
     }
@@ -48,8 +51,8 @@ mod tests {
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::Object(vec![
-                ("a".to_string(), Expr::Number(1.0)),
-                ("b".to_string(), Expr::Number(2.0))
+                ("a".to_string(), Expr::Number(Number::Int(1))),
+                ("b".to_string(), Expr::Number(Number::Int(2)))
             ]))]
         );
     }
@@ -61,9 +64,9 @@ mod tests {
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
-                left: Box::new(Expr::Number(1.0)),
+                left: Box::new(Expr::Number(Number::Int(1))),
                 op: TokenKind::Plus,
-                right: Box::new(Expr::Number(2.0))
+                right: Box::new(Expr::Number(Number::Int(2)))
             })]
         );
     }
@@ -76,7 +79,7 @@ mod tests {
             ast,
             vec![Stmt::Let {
                 name: "x".to_string(),
-                value: Expr::Number(5.0)
+                value: Expr::Number(Number::Int(5))
             }]
         );
     }
@@ -89,12 +92,16 @@ mod tests {
             ast,
             vec![Stmt::Result(Expr::If {
                 condition: Box::new(Expr::BinaryOp {
-                    left: Box::new(Expr::Number(1.0)),
+                    left: Box::new(Expr::Number(Number::Int(1))),
                     op: TokenKind::LessThan,
-                    right: Box::new(Expr::Number(2.0))
+                    right: Box::new(Expr::Number(Number::Int(2)))
                 }),
-                then_branch: Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(3.0))])),
-                else_branch: Some(Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(4.0))])))
+                then_branch: Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(Number::Int(
+                    3
+                )))])),
+                else_branch: Some(Box::new(Expr::Block(vec![Stmt::Result(Expr::Number(
+                    Number::Int(4)
+                ))])))
             })]
         );
     }
@@ -106,12 +113,12 @@ mod tests {
         assert_eq!(
             ast,
             vec![Stmt::Result(Expr::BinaryOp {
-                left: Box::new(Expr::Number(1.0)),
+                left: Box::new(Expr::Number(Number::Int(1))),
                 op: TokenKind::Plus,
                 right: Box::new(Expr::BinaryOp {
-                    left: Box::new(Expr::Number(2.0)),
+                    left: Box::new(Expr::Number(Number::Int(2))),
                     op: TokenKind::Multiply,
-                    right: Box::new(Expr::Number(3.0))
+                    right: Box::new(Expr::Number(Number::Int(3)))
                 })
             })]
         );
@@ -143,7 +150,7 @@ mod tests {
             ast,
             vec![Stmt::Result(Expr::FunctionCall {
                 name: "add".to_string(),
-                args: vec![Expr::Number(1.0), Expr::Number(2.0)]
+                args: vec![Expr::Number(Number::Int(1)), Expr::Number(Number::Int(2))]
             })]
         );
     }
@@ -157,10 +164,10 @@ mod tests {
             vec![Stmt::Result(Expr::FunctionCall {
                 name: "add".to_string(),
                 args: vec![
-                    Expr::Number(1.0),
+                    Expr::Number(Number::Int(1)),
                     Expr::FunctionCall {
                         name: "multiply".to_string(),
-                        args: vec![Expr::Number(2.0), Expr::Number(3.0)]
+                        args: vec![Expr::Number(Number::Int(2)), Expr::Number(Number::Int(3))]
                     }
                 ]
             })]
@@ -176,11 +183,11 @@ mod tests {
             vec![
                 Stmt::Let {
                     name: "x".to_string(),
-                    value: Expr::Number(1.0)
+                    value: Expr::Number(Number::Int(1))
                 },
                 Stmt::Let {
                     name: "y".to_string(),
-                    value: Expr::Number(2.0)
+                    value: Expr::Number(Number::Int(2))
                 }
             ]
         );
@@ -195,11 +202,11 @@ mod tests {
             vec![
                 Stmt::Let {
                     name: "x".to_string(),
-                    value: Expr::Number(1.0)
+                    value: Expr::Number(Number::Int(1))
                 },
                 Stmt::Let {
                     name: "y".to_string(),
-                    value: Expr::Number(2.0)
+                    value: Expr::Number(Number::Int(2))
                 }
             ]
         );
@@ -213,14 +220,14 @@ mod tests {
             ast,
             vec![
                 Stmt::Expr(Expr::BinaryOp {
-                    left: Box::new(Expr::Number(1.0)),
+                    left: Box::new(Expr::Number(Number::Int(1))),
                     op: TokenKind::Plus,
-                    right: Box::new(Expr::Number(2.0))
+                    right: Box::new(Expr::Number(Number::Int(2)))
                 }),
                 Stmt::Result(Expr::BinaryOp {
-                    left: Box::new(Expr::Number(3.0)),
+                    left: Box::new(Expr::Number(Number::Int(3))),
                     op: TokenKind::Multiply,
-                    right: Box::new(Expr::Number(4.0))
+                    right: Box::new(Expr::Number(Number::Int(4)))
                 })
             ]
         );

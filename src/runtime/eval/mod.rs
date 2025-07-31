@@ -47,7 +47,7 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
 
 fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterError> {
     match expr {
-        Expr::Number(n) => Ok(Value::Number(*n)),
+        Expr::Number(n) => Ok(Value::Number(n.clone())),
         Expr::Boolean(b) => Ok(Value::Boolean(*b)),
         Expr::String(s) => Ok(Value::String(s.clone())),
         Expr::Variable(name) => match env.get(name.as_str()) {
