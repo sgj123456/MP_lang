@@ -3,9 +3,6 @@ use crate::runtime::{environment::value::Value, error::InterpreterError};
 #[derive(Debug, Clone)]
 pub enum BuiltinFunction {
     Print,
-    Len,
-    ToString,
-    Vector,
     Push,
     Pop,
 }
@@ -20,22 +17,6 @@ impl BuiltinFunction {
                 println!();
                 Ok(Value::Nil)
             }
-            BuiltinFunction::Len => match args.first() {
-                Some(Value::Number(n)) => Ok(Value::Number(n.abs())),
-                Some(Value::Boolean(b)) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
-                Some(Value::Nil) => Ok(Value::Number(0.0)),
-                Some(Value::Array(v)) => Ok(Value::Number(v.len() as f64)),
-                _ => Err(InterpreterError::TypeMismatch(
-                    "len() expects a number, boolean, nil or vector".to_string(),
-                )),
-            },
-            BuiltinFunction::ToString => match args.first() {
-                Some(value) => Ok(Value::Number(value.to_string().len() as f64)),
-                None => Err(InterpreterError::TypeMismatch(
-                    "toString() expects one argument".to_string(),
-                )),
-            },
-            BuiltinFunction::Vector => Ok(Value::Array(args)),
             BuiltinFunction::Push => match args.as_slice() {
                 [Value::Array(v), item] => {
                     let mut new_vec = v.clone();

@@ -31,18 +31,6 @@ impl Environment {
             EnvironmentValue::Builtin(BuiltinFunction::Print),
         );
         values.insert(
-            "len".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Len),
-        );
-        values.insert(
-            "toString".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::ToString),
-        );
-        values.insert(
-            "vector".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Vector),
-        );
-        values.insert(
             "push".to_string(),
             EnvironmentValue::Builtin(BuiltinFunction::Push),
         );
