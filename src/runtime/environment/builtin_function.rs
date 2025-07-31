@@ -3,6 +3,7 @@ use crate::runtime::{environment::value::Value, error::InterpreterError};
 #[derive(Debug, Clone)]
 pub enum BuiltinFunction {
     Print,
+    Input,
     Push,
     Pop,
 }
@@ -16,6 +17,11 @@ impl BuiltinFunction {
                 }
                 println!();
                 Ok(Value::Nil)
+            }
+            BuiltinFunction::Input => {
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input).unwrap();
+                Ok(Value::String(input.trim().to_string()))
             }
             BuiltinFunction::Push => match args.as_slice() {
                 [Value::Array(v), item] => {

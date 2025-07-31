@@ -38,6 +38,10 @@ impl Environment {
             "pop".to_string(),
             EnvironmentValue::Builtin(BuiltinFunction::Pop),
         );
+        values.insert(
+            "input".to_string(),
+            EnvironmentValue::Builtin(BuiltinFunction::Input),
+        );
 
         Self { values }
     }
