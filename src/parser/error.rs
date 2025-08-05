@@ -10,7 +10,7 @@ impl std::fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParserErrorKind::UnexpectedToken(token) => write!(f, "Unexpected token: {token}"),
-            ParserErrorKind::UnexpectedEOF => write!(f, "Unexpected EOF"),
+            ParserErrorKind::UnexpectedEOF => write!(f, "Unexpected End of File"),
             ParserErrorKind::InvalidSyntax => write!(f, "Invalid syntax"),
         }
     }
