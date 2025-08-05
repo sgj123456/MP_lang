@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use crate::parser::ast::Expr;
-use crate::runtime::environment::environment_value::EnvironmentValue;
+use crate::runtime::environment::environment_value::{EnvironmentValue, Function};
 
-pub mod builtin_function;
 pub mod environment_value;
+pub mod function;
 pub mod value;
 
-use crate::runtime::environment::builtin_function::BuiltinFunction;
-
+use crate::runtime::environment::function::{BuiltinFunction, UserFunction};
 use crate::runtime::environment::value::Value;
 
 #[derive(Debug, Clone)]
@@ -28,19 +27,19 @@ impl Environment {
 
         values.insert(
             "print".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Print),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Print)),
         );
         values.insert(
             "push".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Push),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Push)),
         );
         values.insert(
             "pop".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Pop),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Pop)),
         );
         values.insert(
             "input".to_string(),
-            EnvironmentValue::Builtin(BuiltinFunction::Input),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Input)),
         );
 
         Self { values }
@@ -51,8 +50,10 @@ impl Environment {
     }
 
     pub fn define_function(&mut self, name: String, params: Vec<String>, body: Expr) {
-        self.values
-            .insert(name, EnvironmentValue::Function { params, body });
+        self.values.insert(
+            name,
+            EnvironmentValue::Function(Function::User(UserFunction { params, body })),
+        );
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
@@ -62,11 +63,9 @@ impl Environment {
         }
     }
 
-    pub fn get_function(&self, name: &str) -> Option<(Vec<String>, Expr)> {
+    pub fn get_function(&self, name: &str) -> Option<&Function> {
         match self.values.get(name) {
-            Some(EnvironmentValue::Function { params, body }) => {
-                Some((params.clone(), body.clone()))
-            }
+            Some(EnvironmentValue::Function(function)) => Some(function),
             _ => None,
         }
     }

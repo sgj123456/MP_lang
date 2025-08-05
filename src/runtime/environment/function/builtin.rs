@@ -1,4 +1,7 @@
-use crate::runtime::{environment::value::Value, error::InterpreterError};
+use crate::runtime::{
+    environment::{function::Fun, value::Value},
+    error::InterpreterError,
+};
 
 #[derive(Debug, Clone)]
 pub enum BuiltinFunction {
@@ -8,8 +11,8 @@ pub enum BuiltinFunction {
     Pop,
 }
 
-impl BuiltinFunction {
-    pub fn call(&self, args: Vec<Value>) -> Result<Value, InterpreterError> {
+impl Fun for BuiltinFunction {
+    fn call(&self, args: Vec<Value>) -> Result<Value, InterpreterError> {
         match self {
             BuiltinFunction::Print => {
                 for arguments in args {

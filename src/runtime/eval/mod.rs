@@ -4,7 +4,7 @@ use crate::{
     lexer::token::TokenKind,
     parser::ast::{Expr, Stmt},
     runtime::{
-        environment::{Environment, environment_value::EnvironmentValue, value::Value},
+        environment::{Environment, function::Fun, value::Value},
         error::InterpreterError,
     },
 };
@@ -45,7 +45,7 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
     }
 }
 
-fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterError> {
+pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterError> {
     match expr {
         Expr::Number(n) => Ok(Value::Number(n.clone())),
         Expr::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -60,11 +60,10 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                     let right_value = eval_expr(right, env)?;
                     env.define(name.clone(), right_value.clone());
                     return Ok(right_value);
-                } else {
-                    return Err(InterpreterError::InvalidOperation(
-                        "Invalid assignment target".to_string(),
-                    ));
                 }
+                return Err(InterpreterError::InvalidOperation(
+                    "Invalid assignment target".to_string(),
+                ));
             }
 
             let left_value = eval_expr(left, env)?;
@@ -101,35 +100,17 @@ fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterErr
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
         }
-        Expr::FunctionCall { name, args } => match env.get_function(name.as_str()) {
-            Some((params, body)) => {
-                if params.len() != args.len() {
-                    return Err(InterpreterError::InvalidOperation(
-                        "参数数量不匹配".to_string(),
-                    ));
-                }
-
-                let mut call_env = env.clone();
-                for (param, arg) in params.iter().zip(args.iter()) {
-                    let value = eval_expr(arg, env)?;
-                    call_env.define(param.clone(), value);
-                }
-                match eval_expr(&body, &mut call_env) {
-                    Ok(value) | Err(InterpreterError::Return(value)) => Ok(value),
-                    Err(err) => Err(err),
-                }
+        Expr::FunctionCall { name, args } => {
+            let mut args_values = Vec::new();
+            for arg in args {
+                args_values.push(eval_expr(arg, env)?);
             }
-            None => {
-                let evaluated_args = args
-                    .iter()
-                    .map(|arg| eval_expr(arg, &mut env.clone()))
-                    .collect::<Result<Vec<_>, _>>()?;
-                match env.values.get(name.as_str()) {
-                    Some(EnvironmentValue::Builtin(builtin)) => builtin.call(evaluated_args),
-                    _ => Err(InterpreterError::UndefinedVariable(name.clone())),
-                }
-            }
-        },
+            let fn_value = match env.get_function(name.as_str()) {
+                Some(value) => value,
+                None => return Err(InterpreterError::UndefinedVariable(name.clone())),
+            };
+            fn_value.call(args_values)
+        }
         Expr::If {
             condition,
             then_branch,
