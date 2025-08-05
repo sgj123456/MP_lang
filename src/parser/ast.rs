@@ -29,7 +29,7 @@ pub enum Expr {
     },
     While {
         condition: Box<Expr>,
-        body: Vec<Stmt>,
+        body: Box<Expr>,
     },
 }
 
@@ -45,6 +45,8 @@ pub enum Stmt {
         params: Vec<String>,
         body: Expr,
     },
+    Break,
+    Continue,
     Result(Expr),
     Return(Option<Expr>),
 }

@@ -58,6 +58,8 @@ pub enum TokenKind {
     If,
     Else,
     While,
+    Break,
+    Continue,
     Return,
     Eof,
 }
@@ -96,6 +98,8 @@ impl std::fmt::Display for TokenKind {
             TokenKind::If => write!(f, "if"),
             TokenKind::Else => write!(f, "else"),
             TokenKind::While => write!(f, "while"),
+            TokenKind::Break => write!(f, "break"),
+            TokenKind::Continue => write!(f, "continue"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::Eof => write!(f, "End of file"),
         }

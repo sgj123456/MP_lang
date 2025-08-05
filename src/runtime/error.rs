@@ -11,6 +11,8 @@ pub enum InterpreterError {
     TypeMismatch(String),
     UnsupportedExpression(String),
     Return(Value),
+    Break,
+    Continue,
 }
 
 impl fmt::Display for InterpreterError {
@@ -23,6 +25,8 @@ impl fmt::Display for InterpreterError {
                 write!(f, "Unsupported expression: {expression}")
             }
             InterpreterError::Return(value) => write!(f, "Function return value: {value}"),
+            InterpreterError::Break => write!(f, "Break statement"),
+            InterpreterError::Continue => write!(f, "Continue statement"),
         }
     }
 }

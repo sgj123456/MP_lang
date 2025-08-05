@@ -39,6 +39,8 @@ fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterErr
             env.define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
+        Stmt::Break => Err(InterpreterError::Break),
+        Stmt::Continue => Err(InterpreterError::Continue),
         Stmt::Result(expr) => eval_expr(expr, env),
         Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
         Stmt::Return(None) => Err(InterpreterError::Return(Value::Nil)),
@@ -89,7 +91,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 _ => Err(InterpreterError::TypeMismatch(
-                    "操作数类型不匹配".to_string(),
+                    "Invalid operands for binary operation".to_string(),
                 )),
             }
         }
@@ -132,10 +134,9 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
             }
         }
         Expr::Block(statements) => {
-            let mut block_env = env.clone();
             let mut result = Value::Nil;
             for stmt in statements {
-                result = eval_stmt(stmt, &mut block_env)?;
+                result = eval_stmt(stmt, env)?;
             }
             Ok(result)
         }
@@ -143,20 +144,22 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
             let mut result = Vec::new();
             loop {
                 let condition_value = eval_expr(condition, env)?;
-                if let Value::Boolean(b) = condition_value {
-                    if !b {
-                        break;
+                match condition_value {
+                    Value::Boolean(false) => break,
+                    Value::Boolean(true) => {}
+                    _ => {
+                        return Err(InterpreterError::TypeMismatch(
+                            "While condition must be boolean".to_string(),
+                        ));
                     }
-                } else {
-                    return Err(InterpreterError::TypeMismatch(
-                        "While condition must be boolean".to_string(),
-                    ));
                 }
-                let (last, body) = body.split_last().unwrap();
-                for stmt in body {
-                    eval_stmt(stmt, env)?;
-                }
-                result.push(eval_stmt(last, env)?);
+                let value = match eval_expr(body, env) {
+                    Ok(value) => value,
+                    Err(InterpreterError::Break) => break,
+                    Err(InterpreterError::Continue) => continue,
+                    err @ Err(_) => return err,
+                };
+                result.push(value);
             }
             if result.is_empty() {
                 Ok(Value::Nil)

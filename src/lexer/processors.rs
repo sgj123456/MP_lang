@@ -190,6 +190,8 @@ impl TokenProcessor for IdentifierProcessor {
             "else" => TokenKind::Else,
             "while" => TokenKind::While,
             "return" => TokenKind::Return,
+            "break" => TokenKind::Break,
+            "continue" => TokenKind::Continue,
             "true" => TokenKind::Boolean(true),
             "false" => TokenKind::Boolean(false),
             _ => TokenKind::Identifier(ident),

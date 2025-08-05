@@ -52,6 +52,10 @@ impl Parser {
             self.let_statement()?
         } else if self.match_token(&TokenKind::Fn) {
             self.function_statement()?
+        } else if self.match_token(&TokenKind::Continue) {
+            Stmt::Continue
+        } else if self.match_token(&TokenKind::Break) {
+            Stmt::Break
         } else if self.match_token(&TokenKind::Return) {
             let value = if !self.check(&TokenKind::Semicolon) && !self.check(&TokenKind::Newline) {
                 Some(self.expression()?)
@@ -90,21 +94,10 @@ impl Parser {
 
     fn while_expression(&mut self) -> Result<Expr, ParserError> {
         let condition = self.expression()?;
-        self.consume(&TokenKind::LeftBrace, "Expect '{' after while condition")?;
-
-        let mut body = Vec::new();
-        loop {
-            if self.check(&TokenKind::RightBrace) || self.is_at_end() {
-                break;
-            }
-
-            body.push(self.statement()?);
-        }
-
-        self.consume(&TokenKind::RightBrace, "Expect '}' after while body")?;
+        let body = self.expression()?;
         Ok(Expr::While {
             condition: Box::new(condition),
-            body,
+            body: Box::new(body),
         })
     }
 
