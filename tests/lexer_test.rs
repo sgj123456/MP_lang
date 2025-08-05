@@ -202,7 +202,7 @@ mod tests {
         assert_eq!(tokens[1].kind, TokenKind::Identifier("x".to_string()));
         assert_eq!(tokens[1].span, Span { line: 1, column: 5 });
 
-        assert_eq!(tokens[2].kind, TokenKind::Equal);
+        assert_eq!(tokens[2].kind, TokenKind::Assign);
         assert_eq!(tokens[2].span, Span { line: 1, column: 7 });
 
         assert_eq!(tokens[3].kind, TokenKind::Number(Number::Int(123)));

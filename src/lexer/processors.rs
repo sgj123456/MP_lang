@@ -136,7 +136,7 @@ impl TokenProcessor for OperatorProcessor {
                     lexer.next();
                     TokenKind::Equal
                 } else {
-                    TokenKind::Equal
+                    TokenKind::Assign
                 }
             }
             '!' => {

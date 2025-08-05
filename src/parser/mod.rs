@@ -110,7 +110,7 @@ impl Parser {
 
     fn let_statement(&mut self) -> Result<Stmt, ParserError> {
         let name = self.consume_identifier()?;
-        self.consume(&TokenKind::Equal, "Expect '=' after variable name")?;
+        self.consume(&TokenKind::Assign, "Expect '=' after variable name")?;
         let value = self.expression()?;
         Ok(Stmt::Let { name, value })
     }
@@ -128,12 +128,12 @@ impl Parser {
     fn assignment(&mut self) -> Result<Expr, ParserError> {
         let expr = self.equality()?;
 
-        if self.match_token(&TokenKind::Equal) {
+        if self.match_token(&TokenKind::Assign) {
             let value = self.assignment()?;
             if let Expr::Variable(name) = expr {
                 return Ok(Expr::BinaryOp {
                     left: Box::new(Expr::Variable(name)),
-                    op: TokenKind::Equal,
+                    op: TokenKind::Assign,
                     right: Box::new(value),
                 });
             }

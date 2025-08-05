@@ -55,7 +55,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
         Expr::BinaryOp { left, op, right } => {
-            if let TokenKind::Equal = op {
+            if let TokenKind::Assign = op {
                 if let Expr::Variable(name) = left.as_ref() {
                     let right_value = eval_expr(right, env)?;
                     env.define(name.clone(), right_value.clone());
