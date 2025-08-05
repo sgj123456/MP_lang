@@ -43,6 +43,18 @@ impl Environment {
             "input".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Input)),
         );
+        values.insert(
+            "int".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Int)),
+        );
+        values.insert(
+            "float".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Float)),
+        );
+        values.insert(
+            "random".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Random)),
+        );
 
         Self { values }
     }

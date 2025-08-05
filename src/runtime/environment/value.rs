@@ -19,6 +19,21 @@ pub enum Number {
     Float(f64),
 }
 
+impl Number {
+    pub fn to_int(&self) -> i128 {
+        match self {
+            Number::Int(i) => *i,
+            Number::Float(f) => *f as i128,
+        }
+    }
+    pub fn to_float(&self) -> f64 {
+        match self {
+            Number::Int(i) => *i as f64,
+            Number::Float(f) => *f,
+        }
+    }
+}
+
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
