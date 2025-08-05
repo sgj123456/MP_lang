@@ -2,6 +2,9 @@ pub mod lexer;
 pub mod parser;
 pub mod runtime;
 
+pub use runtime::environment::{BuiltinFunction, Environment, UserFunction, Value};
+pub use runtime::error::InterpreterError;
+
 use rustyline::{
     Completer, Config, Editor, Helper, Highlighter, Hinter, Validator, error::ReadlineError,
     highlight::MatchingBracketHighlighter, history::FileHistory,
@@ -9,7 +12,7 @@ use rustyline::{
 };
 use std::{fs, result::Result};
 
-use crate::runtime::{environment::Environment, error::InterpreterError, eval::eval_with_env};
+use crate::runtime::eval::eval_with_env;
 
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(filename)?;

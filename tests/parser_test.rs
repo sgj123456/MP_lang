@@ -2,10 +2,7 @@
 mod tests {
     use mp_lang::{
         lexer::{TokenKind, tokenize},
-        parser::{
-            ast::{Expr, Stmt},
-            parse,
-        },
+        parser::{Expr, Stmt, parse},
         runtime::environment::value::Number,
     };
 

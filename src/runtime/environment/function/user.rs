@@ -1,5 +1,5 @@
 use crate::{
-    parser::ast::Expr,
+    parser::Expr,
     runtime::{
         environment::{Environment, function::Fun, value::Value},
         error::InterpreterError,

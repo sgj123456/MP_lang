@@ -1,5 +1,5 @@
-pub mod error;
-pub mod token;
+mod error;
+mod token;
 
 pub use error::LexerError;
 pub use token::Span;

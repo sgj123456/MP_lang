@@ -1,11 +1,11 @@
-pub mod ast;
-pub mod error;
+mod ast;
+mod error;
+
+pub use ast::{Expr, Stmt};
+
 use crate::{
-    lexer::token::{Token, TokenKind},
-    parser::{
-        ast::{Expr, Stmt},
-        error::ParserError,
-    },
+    lexer::{Token, TokenKind},
+    parser::error::ParserError,
 };
 
 pub struct Parser {

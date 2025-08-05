@@ -5,6 +5,14 @@ use std::{
     str::FromStr,
 };
 
+use crate::runtime::environment::function::Function;
+
+#[derive(Debug, Clone)]
+pub enum EnvironmentValue {
+    Variable(Value),
+    Function(Function),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Number {
     Int(i128),

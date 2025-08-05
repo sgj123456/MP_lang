@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    lexer::token::TokenKind,
-    parser::ast::{Expr, Stmt},
+    lexer::TokenKind,
+    parser::{Expr, Stmt},
     runtime::{
         environment::{Environment, function::Fun, value::Value},
         error::InterpreterError,

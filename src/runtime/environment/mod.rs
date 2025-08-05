@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::Expr;
-use crate::runtime::environment::environment_value::{EnvironmentValue, Function};
+use crate::{
+    parser::Expr,
+    runtime::environment::{function::Function, value::EnvironmentValue},
+};
 
-pub mod environment_value;
 pub mod function;
 pub mod value;
 
-use crate::runtime::environment::function::{BuiltinFunction, UserFunction};
-use crate::runtime::environment::value::Value;
+pub use function::{BuiltinFunction, UserFunction};
+pub use value::Value;
 
+/// The execution environment storing variables and functions
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub(crate) values: HashMap<String, EnvironmentValue>,
