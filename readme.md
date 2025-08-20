@@ -22,7 +22,6 @@ readability.
 
 | Type     | Description                             | Implemented | Example                          |
 | -------- | --------------------------------------- | ----------- | -------------------------------- |
-| ---      | ---                                     | ---         | ---                              |
 | Number   | integer or float                        | Yes         | `10`, `3.14`                     |
 | String   | sequence of characters                  | Yes         | `"hello world"`                  |
 | Boolean  | true or false                           | Yes         | `true`, `false`                  |
