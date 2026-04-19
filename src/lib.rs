@@ -49,7 +49,7 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
                         return true;
                     }
                 };
-                match runtime::eval::eval_with_env_rc(ast, env) {
+                match runtime::eval::eval_with_env(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),
                 }

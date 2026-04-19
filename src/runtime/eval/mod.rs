@@ -13,34 +13,34 @@ use crate::{
 
 pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
     let env = Environment::new_root();
-    let env_rc = Rc::new(RefCell::new(env));
-    eval_with_env_rc(ast, &env_rc)
+    let env = Rc::new(RefCell::new(env));
+    eval_with_env(ast, &env)
 }
 
-pub fn eval_with_env_rc(
+pub fn eval_with_env(
     ast: Vec<Stmt>,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
     let mut result = Value::Nil;
 
     for stmt in ast {
-        result = eval_stmt_rc(&stmt, env)?;
+        result = eval_stmt(&stmt, env)?;
     }
 
     Ok(result)
 }
 
-pub fn eval_stmt_rc(
+pub fn eval_stmt(
     stmt: &Stmt,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
     match stmt {
         Stmt::Expr(expr) => {
-            eval_expr_rc(expr, env)?;
+            eval_expr(expr, env)?;
             Ok(Value::Nil)
         }
         Stmt::Let { name, value } => {
-            let value = eval_expr_rc(value, env)?;
+            let value = eval_expr(value, env)?;
             env.borrow_mut().define(name.clone(), value);
             Ok(Value::Nil)
         }
@@ -51,13 +51,13 @@ pub fn eval_stmt_rc(
         }
         Stmt::Break => Err(InterpreterError::Break),
         Stmt::Continue => Err(InterpreterError::Continue),
-        Stmt::Result(expr) => eval_expr_rc(expr, env),
-        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr_rc(expr, env)?)),
+        Stmt::Result(expr) => eval_expr(expr, env),
+        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
         Stmt::Return(None) => Err(InterpreterError::Return(Value::Nil)),
     }
 }
 
-pub fn eval_expr_rc(
+pub fn eval_expr(
     expr: &Expr,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
@@ -72,7 +72,7 @@ pub fn eval_expr_rc(
         Expr::BinaryOp { left, op, right } => {
             if let TokenKind::Assign = op {
                 if let Expr::Variable(name) = left.as_ref() {
-                    let right_value = eval_expr_rc(right, env)?;
+                    let right_value = eval_expr(right, env)?;
                     env.borrow_mut()
                         .assign(name.as_str(), right_value.clone())?;
                     return Ok(right_value);
@@ -82,8 +82,8 @@ pub fn eval_expr_rc(
                 ));
             }
 
-            let left_value = eval_expr_rc(left, env)?;
-            let right_value = eval_expr_rc(right, env)?;
+            let left_value = eval_expr(left, env)?;
+            let right_value = eval_expr(right, env)?;
 
             match (left_value, right_value) {
                 (Value::Number(l), Value::Number(r)) => match op {
@@ -110,7 +110,7 @@ pub fn eval_expr_rc(
             }
         }
         Expr::UnaryOp { op, expr } => {
-            let value = eval_expr_rc(expr, env)?;
+            let value = eval_expr(expr, env)?;
             match (op, value) {
                 (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
@@ -119,25 +119,25 @@ pub fn eval_expr_rc(
         Expr::FunctionCall { name, args } => {
             let mut args_values = Vec::new();
             for arg in args {
-                args_values.push(eval_expr_rc(arg, env)?);
+                args_values.push(eval_expr(arg, env)?);
             }
             let fn_value = match env.borrow().get_function_recursive(name.as_str()) {
                 Some(value) => value,
                 None => return Err(InterpreterError::UndefinedVariable(name.clone())),
             };
-            fn_value.call_rc(args_values, env)
+            fn_value.call(args_values, env)
         }
         Expr::If {
             condition,
             then_branch,
             else_branch,
         } => {
-            let condition_value = eval_expr_rc(condition, env)?;
+            let condition_value = eval_expr(condition, env)?;
             if let Value::Boolean(b) = condition_value {
                 if b {
-                    eval_expr_rc(then_branch, env)
+                    eval_expr(then_branch, env)
                 } else if let Some(else_branch) = else_branch {
-                    eval_expr_rc(else_branch, env)
+                    eval_expr(else_branch, env)
                 } else {
                     Ok(Value::Nil)
                 }
@@ -150,14 +150,14 @@ pub fn eval_expr_rc(
         Expr::Block(statements) => {
             let mut result = Value::Nil;
             for stmt in statements {
-                result = eval_stmt_rc(stmt, env)?;
+                result = eval_stmt(stmt, env)?;
             }
             Ok(result)
         }
         Expr::While { condition, body } => {
             let mut result = Vec::new();
             loop {
-                let condition_value = eval_expr_rc(condition, env)?;
+                let condition_value = eval_expr(condition, env)?;
                 match condition_value {
                     Value::Boolean(false) => break,
                     Value::Boolean(true) => {}
@@ -167,7 +167,7 @@ pub fn eval_expr_rc(
                         ));
                     }
                 }
-                let value = match eval_expr_rc(body, env) {
+                let value = match eval_expr(body, env) {
                     Ok(value) => value,
                     Err(InterpreterError::Break) => break,
                     Err(InterpreterError::Continue) => continue,
@@ -184,21 +184,21 @@ pub fn eval_expr_rc(
         Expr::Array(values) => {
             let evaluated_values = values
                 .iter()
-                .map(|value| eval_expr_rc(value, env))
+                .map(|value| eval_expr(value, env))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(Value::Array(evaluated_values))
         }
         Expr::Object(vec) => {
             let mut object = HashMap::new();
             for (key, value) in vec {
-                let value = eval_expr_rc(value, env)?;
+                let value = eval_expr(value, env)?;
                 object.insert(key.clone(), value);
             }
             Ok(Value::Object(object))
         }
         Expr::Index { object, index } => {
-            let obj_value = eval_expr_rc(object, env)?;
-            let index_value = eval_expr_rc(index, env)?;
+            let obj_value = eval_expr(object, env)?;
+            let index_value = eval_expr(index, env)?;
 
             match (obj_value, index_value) {
                 (Value::Array(arr), Value::Number(num)) => {
@@ -230,7 +230,7 @@ pub fn eval_expr_rc(
             }
         }
         Expr::GetProperty { object, property } => {
-            let obj_value = eval_expr_rc(object, env)?;
+            let obj_value = eval_expr(object, env)?;
 
             match obj_value {
                 Value::Object(obj) => {

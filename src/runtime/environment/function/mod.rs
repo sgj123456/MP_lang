@@ -12,8 +12,7 @@ use crate::{
 };
 
 pub trait Fun {
-    fn call(&self, args: Vec<Value>, env: &mut Environment) -> Result<Value, InterpreterError>;
-    fn call_rc(
+    fn call(
         &self,
         args: Vec<Value>,
         env: &Rc<RefCell<Environment>>,
@@ -26,21 +25,14 @@ pub enum Function {
     User(UserFunction),
 }
 impl Fun for Function {
-    fn call(&self, args: Vec<Value>, env: &mut Environment) -> Result<Value, InterpreterError> {
-        match self {
-            Function::Builtin(f) => f.call(args, env),
-            Function::User(f) => f.call(args, env),
-        }
-    }
-
-    fn call_rc(
+    fn call(
         &self,
         args: Vec<Value>,
         env: &Rc<RefCell<Environment>>,
     ) -> Result<Value, InterpreterError> {
         match self {
-            Function::Builtin(f) => f.call_rc(args, env),
-            Function::User(f) => f.call_rc(args, env),
+            Function::Builtin(f) => f.call(args, env),
+            Function::User(f) => f.call(args, env),
         }
     }
 }

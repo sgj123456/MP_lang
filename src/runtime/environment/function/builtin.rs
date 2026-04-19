@@ -155,22 +155,7 @@ fn random(args: Vec<Value>) -> Result<Value, InterpreterError> {
 }
 
 impl Fun for BuiltinFunction {
-    fn call(&self, args: Vec<Value>, _env: &mut Environment) -> Result<Value, InterpreterError> {
-        match self {
-            BuiltinFunction::Print => print(args),
-            BuiltinFunction::Input => input(),
-            BuiltinFunction::Push => push(args),
-            BuiltinFunction::Pop => pop(args),
-            BuiltinFunction::Int => int(args),
-            BuiltinFunction::Float => float(args),
-            BuiltinFunction::String => string(args),
-            BuiltinFunction::Len => len(args),
-            BuiltinFunction::Type => type_of(args),
-            BuiltinFunction::Random => random(args),
-        }
-    }
-
-    fn call_rc(
+    fn call(
         &self,
         args: Vec<Value>,
         _env: &Rc<RefCell<Environment>>,

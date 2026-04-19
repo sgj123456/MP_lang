@@ -6,7 +6,7 @@ use crate::{
     runtime::{
         environment::{Environment, function::Fun, value::Value},
         error::InterpreterError,
-        eval::eval_expr_rc,
+        eval::eval_expr,
     },
 };
 
@@ -17,34 +17,18 @@ pub struct UserFunction {
 }
 
 impl Fun for UserFunction {
-    fn call(&self, args: Vec<Value>, parent: &mut Environment) -> Result<Value, InterpreterError> {
-        let env = Environment::new_child(Rc::new(RefCell::new(parent.clone())));
-        let env_rc = Rc::new(RefCell::new(env));
-
-        for (param, arg) in self.params.iter().zip(args) {
-            env_rc.borrow_mut().define(param.to_string(), arg);
-        }
-
-        match eval_expr_rc(&self.body, &env_rc) {
-            Err(InterpreterError::Return(value)) => Ok(value),
-            Ok(value) => Ok(value),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn call_rc(
+    fn call(
         &self,
         args: Vec<Value>,
         parent: &Rc<RefCell<Environment>>,
     ) -> Result<Value, InterpreterError> {
-        let env = Environment::new_child(parent.clone());
-        let env_rc = Rc::new(RefCell::new(env));
+        let env = Rc::new(RefCell::new(Environment::new_child(parent.clone())));
 
         for (param, arg) in self.params.iter().zip(args) {
-            env_rc.borrow_mut().define(param.to_string(), arg);
+            env.borrow_mut().define(param.to_string(), arg);
         }
 
-        match eval_expr_rc(&self.body, &env_rc) {
+        match eval_expr(&self.body, &env) {
             Err(InterpreterError::Return(value)) => Ok(value),
             Ok(value) => Ok(value),
             Err(e) => Err(e),
