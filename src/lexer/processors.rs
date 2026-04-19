@@ -109,7 +109,8 @@ pub fn operator_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError
         '*' => TokenKind::Multiply,
         '/' => TokenKind::Divide,
         '=' => {
-            if let Some('=') = lexer.peek_next() {
+            lexer.next();
+            if let Some('=') = lexer.peek() {
                 lexer.next();
                 TokenKind::Equal
             } else {
@@ -117,7 +118,8 @@ pub fn operator_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError
             }
         }
         '!' => {
-            if let Some('=') = lexer.peek_next() {
+            lexer.next();
+            if let Some('=') = lexer.peek() {
                 lexer.next();
                 TokenKind::NotEqual
             } else {
@@ -125,7 +127,8 @@ pub fn operator_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError
             }
         }
         '>' => {
-            if let Some('=') = lexer.peek_next() {
+            lexer.next();
+            if let Some('=') = lexer.peek() {
                 lexer.next();
                 TokenKind::GreaterThanOrEqual
             } else {
@@ -133,7 +136,8 @@ pub fn operator_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError
             }
         }
         '<' => {
-            if let Some('=') = lexer.peek_next() {
+            lexer.next();
+            if let Some('=') = lexer.peek() {
                 lexer.next();
                 TokenKind::LessThanOrEqual
             } else {
@@ -143,7 +147,6 @@ pub fn operator_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError
         _ => return Ok(None),
     };
 
-    lexer.next();
     Ok(Some(Token { kind, span }))
 }
 
@@ -203,8 +206,8 @@ pub fn symbol_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError> 
 pub fn comment_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError> {
     let span = lexer.span();
     if let Some('/') = lexer.peek() {
-        if let Some('/') = lexer.peek_next() {
-            lexer.next();
+        lexer.next();
+        if let Some('/') = lexer.peek() {
             lexer.next();
             let mut comment = String::new();
             while let Some(c) = lexer.peek() {
@@ -219,23 +222,22 @@ pub fn comment_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError>
                 kind: TokenKind::Comment(comment),
                 span,
             }))
-        } else if let Some('*') = lexer.peek_next() {
-            lexer.next();
+        } else if let Some('*') = lexer.peek() {
             lexer.next();
             let mut comment = String::new();
             let mut closed = false;
             while let Some(c) = lexer.peek() {
                 if c == '*' {
-                    if let Some('/') = lexer.peek_next() {
-                        lexer.next();
+                    lexer.next();
+                    if let Some('/') = lexer.peek() {
                         lexer.next();
                         closed = true;
                         break;
                     }
                 } else {
                     comment.push(c);
+                    lexer.next();
                 }
-                lexer.next();
             }
             if !closed {
                 return Err(LexerError::UnclosedComment(span));
@@ -250,4 +252,18 @@ pub fn comment_processor(lexer: &mut Lexer) -> Result<Option<Token>, LexerError>
     } else {
         Ok(None)
     }
+}
+
+pub fn processors() -> [fn(&mut Lexer) -> Result<Option<Token>, LexerError>; 9] {
+    [
+        whitespace_processor,
+        unexpected_char_processor,
+        newline_processor,
+        number_processor,
+        string_processor,
+        operator_processor,
+        identifier_processor,
+        symbol_processor,
+        comment_processor,
+    ]
 }
