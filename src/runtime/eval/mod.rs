@@ -17,7 +17,7 @@ pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
     eval_with_env_rc(ast, &env_rc)
 }
 
-fn eval_with_env_rc(
+pub fn eval_with_env_rc(
     ast: Vec<Stmt>,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
@@ -30,7 +30,10 @@ fn eval_with_env_rc(
     Ok(result)
 }
 
-fn eval_stmt_rc(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, InterpreterError> {
+pub fn eval_stmt_rc(
+    stmt: &Stmt,
+    env: &Rc<RefCell<Environment>>,
+) -> Result<Value, InterpreterError> {
     match stmt {
         Stmt::Expr(expr) => {
             eval_expr_rc(expr, env)?;
@@ -192,6 +195,58 @@ pub fn eval_expr_rc(
                 object.insert(key.clone(), value);
             }
             Ok(Value::Object(object))
+        }
+        Expr::Index { object, index } => {
+            let obj_value = eval_expr_rc(object, env)?;
+            let index_value = eval_expr_rc(index, env)?;
+
+            match (obj_value, index_value) {
+                (Value::Array(arr), Value::Number(num)) => {
+                    let idx = num.to_int() as usize;
+                    if idx < arr.len() {
+                        Ok(arr[idx].clone())
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "Array index out of bounds: {} (length: {})",
+                            idx,
+                            arr.len()
+                        )))
+                    }
+                }
+                (Value::Object(obj), Value::String(key)) => {
+                    if let Some(value) = obj.get(&key) {
+                        Ok(value.clone())
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "Object property not found: {}",
+                            key
+                        )))
+                    }
+                }
+                _ => Err(InterpreterError::TypeMismatch(
+                    "Index access requires array/string index or object/string property"
+                        .to_string(),
+                )),
+            }
+        }
+        Expr::GetProperty { object, property } => {
+            let obj_value = eval_expr_rc(object, env)?;
+
+            match obj_value {
+                Value::Object(obj) => {
+                    if let Some(value) = obj.get(property) {
+                        Ok(value.clone())
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "Object property not found: {}",
+                            property
+                        )))
+                    }
+                }
+                _ => Err(InterpreterError::TypeMismatch(
+                    "Property access requires an object".to_string(),
+                )),
+            }
         }
     }
 }

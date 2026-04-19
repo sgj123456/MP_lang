@@ -1,10 +1,11 @@
-use crate::lexer::Token;
+use crate::lexer::{Span, Token};
 
 #[derive(Debug)]
 pub enum ParserErrorKind {
     UnexpectedToken(Token),
     UnexpectedEOF,
 }
+
 impl std::fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -18,17 +19,26 @@ impl std::fmt::Display for ParserErrorKind {
 pub struct ParserError {
     kind: ParserErrorKind,
     message: String,
+    span: Option<Span>,
 }
 
 impl std::fmt::Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.kind, self.message)
+        if let Some(span) = self.span {
+            write!(f, "Error at {}: {}: {}", span, self.kind, self.message)
+        } else {
+            write!(f, "{}: {}", self.kind, self.message)
+        }
     }
 }
 
 impl ParserError {
     pub fn new(kind: ParserErrorKind, message: String) -> Self {
-        Self { kind, message }
+        let span = match &kind {
+            ParserErrorKind::UnexpectedToken(token) => Some(token.span),
+            _ => None,
+        };
+        Self { kind, message, span }
     }
 }
 

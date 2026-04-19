@@ -10,6 +10,8 @@ use rustyline::{
     highlight::MatchingBracketHighlighter, history::FileHistory,
     validate::MatchingBracketValidator,
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::{fs, result::Result};
 
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -26,7 +28,7 @@ pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn handle_command(cmd: &str, _env: &mut Environment) -> bool {
+pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
     match cmd {
         "exit" => return false,
         "help" => {
@@ -47,7 +49,7 @@ pub fn handle_command(cmd: &str, _env: &mut Environment) -> bool {
                         return true;
                     }
                 };
-                match runtime::eval::eval(ast) {
+                match runtime::eval::eval_with_env_rc(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),
                 }
@@ -74,7 +76,7 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
         brackets: MatchingBracketValidator::new(),
         hightlighter: MatchingBracketHighlighter::new(),
     }));
-    let mut env = Environment::new_root();
+    let env = Rc::new(RefCell::new(Environment::new_root()));
 
     loop {
         let readline = rl.readline(">> ");
@@ -85,7 +87,7 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 }
                 rl.add_history_entry(trimmed)?;
-                if !handle_command(trimmed, &mut env) {
+                if !handle_command(trimmed, &env) {
                     break;
                 }
             }

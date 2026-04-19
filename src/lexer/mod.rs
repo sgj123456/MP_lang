@@ -33,12 +33,12 @@ impl PositionTracker {
     }
 }
 
-pub struct Lexer {
+struct Lexer {
     input: Vec<char>,
     position: usize,
     pos_tracker: PositionTracker,
 }
-
+type Processors = &'static [fn(&mut Lexer) -> Result<Option<Token>, LexerError>];
 impl Lexer {
     pub fn new(input: String) -> Self {
         Lexer {
@@ -48,17 +48,17 @@ impl Lexer {
         }
     }
 
-    fn processors() -> [Box<dyn TokenProcessor>; 9] {
-        [
-            Box::new(WhitespaceProcessor),
-            Box::new(NewlineProcessor),
-            Box::new(NumberProcessor),
-            Box::new(StringProcessor),
-            Box::new(CommentProcessor),
-            Box::new(OperatorProcessor),
-            Box::new(IdentifierProcessor),
-            Box::new(SymbolProcessor),
-            Box::new(UnexpectedCharProcessor),
+    fn processors() -> Processors {
+        &[
+            whitespace_processor,
+            newline_processor,
+            number_processor,
+            string_processor,
+            comment_processor,
+            operator_processor,
+            identifier_processor,
+            symbol_processor,
+            unexpected_char_processor,
         ]
     }
 
@@ -89,7 +89,7 @@ impl Lexer {
         let mut tokens = Vec::new();
         while self.position < self.input.len() {
             for processor in Self::processors() {
-                if let Some(token) = processor.process(self)? {
+                if let Some(token) = processor(self)? {
                     tokens.push(token);
                     break;
                 }

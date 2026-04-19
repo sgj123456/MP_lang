@@ -159,4 +159,44 @@ mod tests {
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(Number::Int(10)));
     }
+
+    #[test]
+    fn test_array_index_access() {
+        let tokens = tokenize("let arr = [10, 20, 30]; arr[1]").unwrap();
+        let ast = parse(tokens).unwrap();
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(Number::Int(20)));
+    }
+
+    #[test]
+    fn test_object_property_access() {
+        let tokens = tokenize("let obj = {\"name\": \"John\", \"age\": 30}; obj:age").unwrap();
+        let ast = parse(tokens).unwrap();
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(Number::Int(30)));
+    }
+
+    #[test]
+    fn test_builtin_len() {
+        let tokens = tokenize("len(\"hello\")").unwrap();
+        let ast = parse(tokens).unwrap();
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::Number(Number::Int(5)));
+    }
+
+    #[test]
+    fn test_builtin_type() {
+        let tokens = tokenize("type(123)").unwrap();
+        let ast = parse(tokens).unwrap();
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::String("int".to_string()));
+    }
+
+    #[test]
+    fn test_builtin_str() {
+        let tokens = tokenize("str(42)").unwrap();
+        let ast = parse(tokens).unwrap();
+        let result = eval(ast).unwrap();
+        assert_eq!(result, Value::String("42".to_string()));
+    }
 }

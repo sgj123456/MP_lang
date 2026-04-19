@@ -18,7 +18,10 @@ pub enum BuiltinFunction {
     Input,
     Int,
     Float,
+    String,
     Random,
+    Len,
+    Type,
     Push,
     Pop,
 }
@@ -94,6 +97,39 @@ fn float(args: Vec<Value>) -> Result<Value, InterpreterError> {
     }
 }
 
+fn string(args: Vec<Value>) -> Result<Value, InterpreterError> {
+    match args.first() {
+        Some(value) => Ok(Value::String(value.to_string())),
+        None => Ok(Value::String("".to_string())),
+    }
+}
+
+fn len(args: Vec<Value>) -> Result<Value, InterpreterError> {
+    match args.first() {
+        Some(Value::String(s)) => Ok(Value::Number(Number::Int(s.len() as i128))),
+        Some(Value::Array(arr)) => Ok(Value::Number(Number::Int(arr.len() as i128))),
+        Some(Value::Object(obj)) => Ok(Value::Number(Number::Int(obj.len() as i128))),
+        _ => Err(InterpreterError::TypeMismatch(
+            "len() expects a string, array, or object".to_string(),
+        )),
+    }
+}
+
+fn type_of(args: Vec<Value>) -> Result<Value, InterpreterError> {
+    match args.first() {
+        Some(Value::Number(n)) => Ok(Value::String(match n {
+            Number::Int(_) => "int".to_string(),
+            Number::Float(_) => "float".to_string(),
+        })),
+        Some(Value::Boolean(_)) => Ok(Value::String("boolean".to_string())),
+        Some(Value::String(_)) => Ok(Value::String("string".to_string())),
+        Some(Value::Array(_)) => Ok(Value::String("array".to_string())),
+        Some(Value::Object(_)) => Ok(Value::String("object".to_string())),
+        Some(Value::Nil) => Ok(Value::String("nil".to_string())),
+        None => Ok(Value::String("nil".to_string())),
+    }
+}
+
 fn random(args: Vec<Value>) -> Result<Value, InterpreterError> {
     match args.as_slice() {
         [] => Ok(Value::Number(Number::Int(rand::random()))),
@@ -127,6 +163,9 @@ impl Fun for BuiltinFunction {
             BuiltinFunction::Pop => pop(args),
             BuiltinFunction::Int => int(args),
             BuiltinFunction::Float => float(args),
+            BuiltinFunction::String => string(args),
+            BuiltinFunction::Len => len(args),
+            BuiltinFunction::Type => type_of(args),
             BuiltinFunction::Random => random(args),
         }
     }
@@ -143,6 +182,9 @@ impl Fun for BuiltinFunction {
             BuiltinFunction::Pop => pop(args),
             BuiltinFunction::Int => int(args),
             BuiltinFunction::Float => float(args),
+            BuiltinFunction::String => string(args),
+            BuiltinFunction::Len => len(args),
+            BuiltinFunction::Type => type_of(args),
             BuiltinFunction::Random => random(args),
         }
     }

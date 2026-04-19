@@ -229,4 +229,30 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn test_array_index_expression() {
+        let tokens = tokenize("arr[0]").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(
+            ast,
+            vec![Stmt::Result(Expr::Index {
+                object: Box::new(Expr::Variable("arr".to_string())),
+                index: Box::new(Expr::Number(Number::Int(0)))
+            })]
+        );
+    }
+
+    #[test]
+    fn test_object_property_expression() {
+        let tokens = tokenize("obj:name").unwrap();
+        let ast = parse(tokens).unwrap();
+        assert_eq!(
+            ast,
+            vec![Stmt::Result(Expr::GetProperty {
+                object: Box::new(Expr::Variable("obj".to_string())),
+                property: "name".to_string()
+            })]
+        );
+    }
 }

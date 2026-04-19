@@ -31,6 +31,14 @@ pub enum Expr {
         condition: Box<Expr>,
         body: Box<Expr>,
     },
+    Index {
+        object: Box<Expr>,
+        index: Box<Expr>,
+    },
+    GetProperty {
+        object: Box<Expr>,
+        property: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]

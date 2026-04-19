@@ -50,8 +50,24 @@ impl Environment {
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Float)),
         );
         locals.insert(
+            "str".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::String)),
+        );
+        locals.insert(
+            "len".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Len)),
+        );
+        locals.insert(
+            "type".to_string(),
+            EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Type)),
+        );
+        locals.insert(
             "random".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Random)),
+        );
+        locals.insert(
+            "nil".to_string(),
+            EnvironmentValue::Variable(Value::Nil),
         );
 
         Self {

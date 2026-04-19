@@ -86,7 +86,10 @@ impl Parser {
             && !self.is_at_block_last_not_empty_line()
             && !matches!(stmt, Stmt::Expr(_) | Stmt::Result(_))
         {
-            panic!("Unexpected token: {:?}", self.peek())
+            return Err(ParserError::new(
+                error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
+                "Unexpected token. Expected ';' or newline".into(),
+            ));
         }
         self.delete_empty_statements();
         Ok(stmt)
@@ -130,7 +133,10 @@ impl Parser {
                     right: Box::new(value),
                 });
             }
-            panic!("Invalid assignment target");
+            return Err(ParserError::new(
+                error::ParserErrorKind::UnexpectedToken(self.previous().clone()),
+                "Invalid assignment target: expected a variable name".into(),
+            ));
         }
 
         Ok(expr)
@@ -267,15 +273,20 @@ impl Parser {
             }
             TokenKind::LeftBrace => {
                 self.advance();
-                // Check if this is an object by looking for key: value pattern
                 self.delete_empty_lines();
-                if let TokenKind::String(_) = &self.peek().kind
-                    && let Some(Token {
-                        kind: TokenKind::Colon,
-                        ..
-                    }) = self.peek_next()
-                {
-                    // Parse as object
+                let is_object = if let TokenKind::String(_) = &self.peek().kind {
+                    matches!(
+                        self.peek_next(),
+                        Some(Token {
+                            kind: TokenKind::Colon,
+                            ..
+                        })
+                    )
+                } else {
+                    false
+                };
+
+                if is_object {
                     let mut properties = Vec::new();
                     while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                         self.delete_empty_lines();
@@ -302,7 +313,6 @@ impl Parser {
                     return Ok(Expr::Object(properties));
                 }
 
-                // Default to block parsing
                 let mut statements = Vec::new();
                 while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                     statements.push(self.statement()?);
@@ -331,6 +341,37 @@ impl Parser {
                 ));
             }
         };
+
+        self.postfix_expression(expr)
+    }
+
+    fn postfix_expression(&mut self, mut expr: Expr) -> Result<Expr, ParserError> {
+        loop {
+            if self.match_token(&TokenKind::LeftBracket) {
+                let index = self.expression()?;
+                self.consume(&TokenKind::RightBracket, "Expect ']' after index")?;
+                expr = Expr::Index {
+                    object: Box::new(expr),
+                    index: Box::new(index),
+                };
+            } else if self.match_token(&TokenKind::Colon) {
+                if let TokenKind::Identifier(property) = &self.peek().kind {
+                    let prop_name = property.clone();
+                    self.advance();
+                    expr = Expr::GetProperty {
+                        object: Box::new(expr),
+                        property: prop_name,
+                    };
+                } else {
+                    return Err(ParserError::new(
+                        error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
+                        "Expect property name after ':'".into(),
+                    ));
+                }
+            } else {
+                break;
+            }
+        }
         Ok(expr)
     }
 

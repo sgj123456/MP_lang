@@ -1,5 +1,6 @@
 use std::{error::Error, fmt};
 
+use crate::lexer::Span;
 use crate::runtime::environment::value::Value;
 
 impl Error for InterpreterError {}
@@ -13,6 +14,10 @@ pub enum InterpreterError {
     Return(Value),
     Break,
     Continue,
+    WithSpan {
+        error: Box<InterpreterError>,
+        span: Span,
+    },
 }
 
 impl fmt::Display for InterpreterError {
@@ -27,6 +32,18 @@ impl fmt::Display for InterpreterError {
             InterpreterError::Return(value) => write!(f, "Function return value: {value}"),
             InterpreterError::Break => write!(f, "Break statement"),
             InterpreterError::Continue => write!(f, "Continue statement"),
+            InterpreterError::WithSpan { error, span } => {
+                write!(f, "Error at {}: {}", span, error)
+            }
+        }
+    }
+}
+
+impl InterpreterError {
+    pub fn with_span(self, span: Span) -> Self {
+        InterpreterError::WithSpan {
+            error: Box::new(self),
+            span,
         }
     }
 }
