@@ -1,8 +1,11 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::{
     parser::Expr,
     runtime::environment::{function::Function, value::EnvironmentValue},
+    runtime::error::InterpreterError,
 };
 
 pub mod function;
@@ -14,73 +17,106 @@ pub use value::Value;
 /// The execution environment storing variables and functions
 #[derive(Debug, Clone)]
 pub struct Environment {
-    pub(crate) values: HashMap<String, EnvironmentValue>,
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Self::new()
-    }
+    parent: Option<Rc<RefCell<Environment>>>,
+    locals: HashMap<String, EnvironmentValue>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
-        let mut values = HashMap::new();
+    pub fn new_root() -> Self {
+        let mut locals = HashMap::new();
 
-        values.insert(
+        locals.insert(
             "print".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Print)),
         );
-        values.insert(
+        locals.insert(
             "push".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Push)),
         );
-        values.insert(
+        locals.insert(
             "pop".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Pop)),
         );
-        values.insert(
+        locals.insert(
             "input".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Input)),
         );
-        values.insert(
+        locals.insert(
             "int".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Int)),
         );
-        values.insert(
+        locals.insert(
             "float".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Float)),
         );
-        values.insert(
+        locals.insert(
             "random".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Random)),
         );
 
-        Self { values }
+        Self {
+            locals,
+            parent: None,
+        }
+    }
+
+    pub fn new_child(parent: Rc<RefCell<Environment>>) -> Self {
+        Self {
+            locals: HashMap::new(),
+            parent: Some(parent),
+        }
     }
 
     pub fn define(&mut self, name: String, value: Value) {
-        self.values.insert(name, EnvironmentValue::Variable(value));
+        self.locals.insert(name, EnvironmentValue::Variable(value));
+    }
+
+    pub fn assign(&mut self, name: &str, value: Value) -> Result<(), InterpreterError> {
+        if self.locals.contains_key(name) {
+            self.locals
+                .insert(name.to_string(), EnvironmentValue::Variable(value));
+            Ok(())
+        } else if let Some(parent) = &self.parent {
+            parent.borrow_mut().assign(name, value)
+        } else {
+            // If variable doesn't exist anywhere, define it in the global (root) environment
+            self.locals
+                .insert(name.to_string(), EnvironmentValue::Variable(value));
+            Ok(())
+        }
     }
 
     pub fn define_function(&mut self, name: String, params: Vec<String>, body: Expr) {
-        self.values.insert(
+        self.locals.insert(
             name,
             EnvironmentValue::Function(Function::User(UserFunction { params, body })),
         );
     }
 
-    pub fn get(&self, name: &str) -> Option<Value> {
-        match self.values.get(name) {
+    pub fn get_value(&self, name: &str) -> Option<Value> {
+        match self.locals.get(name) {
             Some(EnvironmentValue::Variable(value)) => Some(value.clone()),
-            _ => None,
+            _ => self
+                .parent
+                .as_ref()
+                .and_then(|parent| parent.borrow().get_value(name)),
         }
     }
 
     pub fn get_function(&self, name: &str) -> Option<&Function> {
-        match self.values.get(name) {
+        match self.locals.get(name) {
             Some(EnvironmentValue::Function(function)) => Some(function),
             _ => None,
+        }
+    }
+
+    pub fn get_function_recursive(&self, name: &str) -> Option<Function> {
+        match self.locals.get(name) {
+            Some(EnvironmentValue::Function(function)) => Some(function.clone()),
+            _ => self
+                .parent
+                .as_ref()
+                .and_then(|parent| parent.borrow().get_function_recursive(name)),
         }
     }
 }

@@ -4,14 +4,12 @@ use crate::lexer::Token;
 pub enum ParserErrorKind {
     UnexpectedToken(Token),
     UnexpectedEOF,
-    InvalidSyntax,
 }
 impl std::fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParserErrorKind::UnexpectedToken(token) => write!(f, "Unexpected token: {token}"),
             ParserErrorKind::UnexpectedEOF => write!(f, "Unexpected End of File"),
-            ParserErrorKind::InvalidSyntax => write!(f, "Invalid syntax"),
         }
     }
 }
@@ -19,7 +17,7 @@ impl std::fmt::Display for ParserErrorKind {
 #[derive(Debug)]
 pub struct ParserError {
     kind: ParserErrorKind,
-    message: &'static str,
+    message: String,
 }
 
 impl std::fmt::Display for ParserError {
@@ -29,7 +27,7 @@ impl std::fmt::Display for ParserError {
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, message: &'static str) -> Self {
+    pub fn new(kind: ParserErrorKind, message: String) -> Self {
         Self { kind, message }
     }
 }

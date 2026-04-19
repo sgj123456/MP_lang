@@ -12,14 +12,11 @@ use rustyline::{
 };
 use std::{fs, result::Result};
 
-use crate::runtime::eval::eval_with_env;
-
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(filename)?;
-    let mut env = Environment::new();
     let tokens = lexer::tokenize(&content)?;
     let ast = parser::parse(tokens)?;
-    let result = eval_with_env(ast, &mut env);
+    let result = runtime::eval::eval(ast);
     match result {
         Ok(value) | Err(InterpreterError::Return(value)) => {
             println!("=> {value:?}")
@@ -29,7 +26,7 @@ pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn handle_command(cmd: &str, env: &mut Environment) -> bool {
+pub fn handle_command(cmd: &str, _env: &mut Environment) -> bool {
     match cmd {
         "exit" => return false,
         "help" => {
@@ -39,7 +36,6 @@ pub fn handle_command(cmd: &str, env: &mut Environment) -> bool {
             println!("  clear    - clear the environment");
         }
         "clear" => {
-            *env = Environment::new();
             println!("Environment cleared.");
         }
         _ => match lexer::tokenize(cmd) {
@@ -51,7 +47,7 @@ pub fn handle_command(cmd: &str, env: &mut Environment) -> bool {
                         return true;
                     }
                 };
-                match eval_with_env(ast, env) {
+                match runtime::eval::eval(ast) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),
                 }
@@ -78,7 +74,7 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
         brackets: MatchingBracketValidator::new(),
         hightlighter: MatchingBracketHighlighter::new(),
     }));
-    let mut env = Environment::new();
+    let mut env = Environment::new_root();
 
     loop {
         let readline = rl.readline(">> ");
@@ -89,7 +85,6 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 }
                 rl.add_history_entry(trimmed)?;
-
                 if !handle_command(trimmed, &mut env) {
                     break;
                 }

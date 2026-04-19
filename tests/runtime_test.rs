@@ -4,11 +4,8 @@ mod tests {
         lexer::tokenize,
         parser::parse,
         runtime::{
-            environment::{
-                Environment,
-                value::{Number, Value},
-            },
-            eval::{eval, eval_with_env},
+            environment::value::{Number, Value},
+            eval::eval,
         },
     };
 
@@ -30,12 +27,9 @@ mod tests {
 
     #[test]
     fn test_variable_eval() {
-        let mut env = Environment::new();
-        env.define("x".to_string(), Value::Number(Number::Int(5)));
-
-        let tokens = tokenize("x + 3").unwrap();
+        let tokens = tokenize("let x = 5; x + 3").unwrap();
         let ast = parse(tokens).unwrap();
-        let result = eval_with_env(ast, &mut env).unwrap();
+        let result = eval(ast).unwrap();
         assert_eq!(result, Value::Number(Number::Int(8)));
     }
 

@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::{
     lexer::TokenKind,
@@ -10,57 +12,66 @@ use crate::{
 };
 
 pub fn eval(ast: Vec<Stmt>) -> Result<Value, InterpreterError> {
-    let mut env = Environment::new();
-    eval_with_env(ast, &mut env)
+    let env = Environment::new_root();
+    let env_rc = Rc::new(RefCell::new(env));
+    eval_with_env_rc(ast, &env_rc)
 }
 
-pub fn eval_with_env(ast: Vec<Stmt>, env: &mut Environment) -> Result<Value, InterpreterError> {
+fn eval_with_env_rc(
+    ast: Vec<Stmt>,
+    env: &Rc<RefCell<Environment>>,
+) -> Result<Value, InterpreterError> {
     let mut result = Value::Nil;
 
     for stmt in ast {
-        result = eval_stmt(&stmt, env)?;
+        result = eval_stmt_rc(&stmt, env)?;
     }
 
     Ok(result)
 }
 
-fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Value, InterpreterError> {
+fn eval_stmt_rc(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, InterpreterError> {
     match stmt {
         Stmt::Expr(expr) => {
-            eval_expr(expr, env)?;
+            eval_expr_rc(expr, env)?;
             Ok(Value::Nil)
         }
         Stmt::Let { name, value } => {
-            let value = eval_expr(value, env)?;
-            env.define(name.clone(), value);
+            let value = eval_expr_rc(value, env)?;
+            env.borrow_mut().define(name.clone(), value);
             Ok(Value::Nil)
         }
         Stmt::Function { name, params, body } => {
-            env.define_function(name.clone(), params.clone(), body.clone());
+            env.borrow_mut()
+                .define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
         Stmt::Break => Err(InterpreterError::Break),
         Stmt::Continue => Err(InterpreterError::Continue),
-        Stmt::Result(expr) => eval_expr(expr, env),
-        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
+        Stmt::Result(expr) => eval_expr_rc(expr, env),
+        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr_rc(expr, env)?)),
         Stmt::Return(None) => Err(InterpreterError::Return(Value::Nil)),
     }
 }
 
-pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, InterpreterError> {
+pub fn eval_expr_rc(
+    expr: &Expr,
+    env: &Rc<RefCell<Environment>>,
+) -> Result<Value, InterpreterError> {
     match expr {
         Expr::Number(n) => Ok(Value::Number(n.clone())),
         Expr::Boolean(b) => Ok(Value::Boolean(*b)),
         Expr::String(s) => Ok(Value::String(s.clone())),
-        Expr::Variable(name) => match env.get(name.as_str()) {
+        Expr::Variable(name) => match env.borrow().get_value(name.as_str()) {
             Some(value) => Ok(value),
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
         Expr::BinaryOp { left, op, right } => {
             if let TokenKind::Assign = op {
                 if let Expr::Variable(name) = left.as_ref() {
-                    let right_value = eval_expr(right, env)?;
-                    env.define(name.clone(), right_value.clone());
+                    let right_value = eval_expr_rc(right, env)?;
+                    env.borrow_mut()
+                        .assign(name.as_str(), right_value.clone())?;
                     return Ok(right_value);
                 }
                 return Err(InterpreterError::InvalidOperation(
@@ -68,8 +79,8 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
                 ));
             }
 
-            let left_value = eval_expr(left, env)?;
-            let right_value = eval_expr(right, env)?;
+            let left_value = eval_expr_rc(left, env)?;
+            let right_value = eval_expr_rc(right, env)?;
 
             match (left_value, right_value) {
                 (Value::Number(l), Value::Number(r)) => match op {
@@ -96,7 +107,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
             }
         }
         Expr::UnaryOp { op, expr } => {
-            let value = eval_expr(expr, env)?;
+            let value = eval_expr_rc(expr, env)?;
             match (op, value) {
                 (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
@@ -105,25 +116,25 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
         Expr::FunctionCall { name, args } => {
             let mut args_values = Vec::new();
             for arg in args {
-                args_values.push(eval_expr(arg, env)?);
+                args_values.push(eval_expr_rc(arg, env)?);
             }
-            let fn_value = match env.get_function(name.as_str()) {
+            let fn_value = match env.borrow().get_function_recursive(name.as_str()) {
                 Some(value) => value,
                 None => return Err(InterpreterError::UndefinedVariable(name.clone())),
             };
-            fn_value.call(args_values)
+            fn_value.call_rc(args_values, env)
         }
         Expr::If {
             condition,
             then_branch,
             else_branch,
         } => {
-            let condition_value = eval_expr(condition, env)?;
+            let condition_value = eval_expr_rc(condition, env)?;
             if let Value::Boolean(b) = condition_value {
                 if b {
-                    eval_expr(then_branch, env)
+                    eval_expr_rc(then_branch, env)
                 } else if let Some(else_branch) = else_branch {
-                    eval_expr(else_branch, env)
+                    eval_expr_rc(else_branch, env)
                 } else {
                     Ok(Value::Nil)
                 }
@@ -136,14 +147,14 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
         Expr::Block(statements) => {
             let mut result = Value::Nil;
             for stmt in statements {
-                result = eval_stmt(stmt, env)?;
+                result = eval_stmt_rc(stmt, env)?;
             }
             Ok(result)
         }
         Expr::While { condition, body } => {
             let mut result = Vec::new();
             loop {
-                let condition_value = eval_expr(condition, env)?;
+                let condition_value = eval_expr_rc(condition, env)?;
                 match condition_value {
                     Value::Boolean(false) => break,
                     Value::Boolean(true) => {}
@@ -153,7 +164,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
                         ));
                     }
                 }
-                let value = match eval_expr(body, env) {
+                let value = match eval_expr_rc(body, env) {
                     Ok(value) => value,
                     Err(InterpreterError::Break) => break,
                     Err(InterpreterError::Continue) => continue,
@@ -170,14 +181,14 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, Interprete
         Expr::Array(values) => {
             let evaluated_values = values
                 .iter()
-                .map(|value| eval_expr(value, env))
+                .map(|value| eval_expr_rc(value, env))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(Value::Array(evaluated_values))
         }
         Expr::Object(vec) => {
             let mut object = HashMap::new();
             for (key, value) in vec {
-                let value = eval_expr(value, env)?;
+                let value = eval_expr_rc(value, env)?;
                 object.insert(key.clone(), value);
             }
             Ok(Value::Object(object))

@@ -5,7 +5,7 @@ pub use ast::{Expr, Stmt};
 
 use crate::{
     lexer::{Token, TokenKind},
-    parser::error::ParserError,
+    parser::error::{ParserError, ParserErrorKind},
 };
 
 pub struct Parser {
@@ -76,7 +76,7 @@ impl Parser {
             } else {
                 return Err(ParserError::new(
                     error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
-                    "Unexpected token. Expected a statement.",
+                    "Unexpected token. Expected a statement.".into(),
                 ));
             }
         };
@@ -221,7 +221,7 @@ impl Parser {
         if self.is_at_end() {
             return Err(ParserError::new(
                 error::ParserErrorKind::UnexpectedEOF,
-                "Unexpected end of file. Expected expression.",
+                "Unexpected end of file. Expected expression.".into(),
             ));
         }
         let expr = match &self.peek().kind {
@@ -284,7 +284,7 @@ impl Parser {
                         } else {
                             return Err(ParserError::new(
                                 error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
-                                "Expect property name",
+                                "Expect property name".into(),
                             ));
                         };
                         self.advance();
@@ -325,10 +325,10 @@ impl Parser {
 
             _ => {
                 let token = self.peek();
-                panic!(
-                    "Unexpected token {:?} at {}:{}",
-                    token.kind, token.span.line, token.span.column
-                );
+                return Err(ParserError::new(
+                    ParserErrorKind::UnexpectedToken(token.clone()),
+                    "in primary parser".into(),
+                ));
             }
         };
         Ok(expr)
@@ -363,7 +363,7 @@ impl Parser {
             let token = self.peek();
             Err(ParserError::new(
                 error::ParserErrorKind::UnexpectedToken(token.clone()),
-                message,
+                message.into(),
             ))
         }
     }
@@ -435,7 +435,7 @@ impl Parser {
         } else {
             Err(ParserError::new(
                 error::ParserErrorKind::UnexpectedToken(self.peek().clone()),
-                "Expect identifier",
+                "Expect identifier".into(),
             ))
         }
     }

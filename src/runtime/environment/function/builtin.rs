@@ -1,9 +1,15 @@
-use crate::runtime::{
-    environment::{
-        function::Fun,
-        value::{Number, Value},
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::{
+    Environment,
+    runtime::{
+        environment::{
+            function::Fun,
+            value::{Number, Value},
+        },
+        error::InterpreterError,
     },
-    error::InterpreterError,
 };
 
 #[derive(Debug, Clone)]
@@ -113,7 +119,23 @@ fn random(args: Vec<Value>) -> Result<Value, InterpreterError> {
 }
 
 impl Fun for BuiltinFunction {
-    fn call(&self, args: Vec<Value>) -> Result<Value, InterpreterError> {
+    fn call(&self, args: Vec<Value>, _env: &mut Environment) -> Result<Value, InterpreterError> {
+        match self {
+            BuiltinFunction::Print => print(args),
+            BuiltinFunction::Input => input(),
+            BuiltinFunction::Push => push(args),
+            BuiltinFunction::Pop => pop(args),
+            BuiltinFunction::Int => int(args),
+            BuiltinFunction::Float => float(args),
+            BuiltinFunction::Random => random(args),
+        }
+    }
+
+    fn call_rc(
+        &self,
+        args: Vec<Value>,
+        _env: &Rc<RefCell<Environment>>,
+    ) -> Result<Value, InterpreterError> {
         match self {
             BuiltinFunction::Print => print(args),
             BuiltinFunction::Input => input(),
