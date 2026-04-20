@@ -54,6 +54,40 @@ impl MpDefinition {
             return Some(GotoDefinitionResponse::Scalar(location));
         }
 
+        self.find_function_call_definition(&tokens, &target_name, uri)
+    }
+
+    fn find_function_call_definition(
+        &self,
+        tokens: &[crate::lexer::Token],
+        target_name: &str,
+        uri: &str,
+    ) -> Option<GotoDefinitionResponse> {
+        let ast = parse(tokens.to_vec()).ok()?;
+
+        for stmt in &ast {
+            if let StmtKind::Function { name, .. } = &stmt.kind {
+                if name == target_name {
+                    if let Some(token) = self.find_token_by_name(name, tokens) {
+                        let location = Location {
+                            uri: url::Url::parse(uri).unwrap(),
+                            range: Range {
+                                start: Position {
+                                    line: (token.span.line - 1) as u32,
+                                    character: (token.span.column - 1) as u32,
+                                },
+                                end: Position {
+                                    line: (token.span.line - 1) as u32,
+                                    character: (token.span.column + name.len() - 1) as u32,
+                                },
+                            },
+                        };
+                        return Some(GotoDefinitionResponse::Scalar(location));
+                    }
+                }
+            }
+        }
+
         None
     }
 
@@ -187,7 +221,7 @@ impl MpDefinition {
         None
     }
 
-    fn is_builtin(&self, name: &str) -> bool {
+    pub fn is_builtin(&self, name: &str) -> bool {
         matches!(
             name,
             "print"

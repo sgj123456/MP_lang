@@ -227,63 +227,67 @@ impl MpHover {
 
     #[allow(dead_code)]
     fn get_identifier_info(&self, name: &str) -> (String, &'static str) {
+        if self.is_builtin_keyword(name) {
+            return (format!("**{}**", name), "keyword");
+        }
+
+        if let Some(builtin_info) = self.get_builtin_function_info(name) {
+            return builtin_info;
+        }
+
+        (
+            format!("**{}**\n\nIdentifier (variable or function)", name),
+            "identifier",
+        )
+    }
+
+    fn is_builtin_keyword(&self, name: &str) -> bool {
+        matches!(name, "true" | "false" | "nil")
+    }
+
+    fn get_builtin_function_info(&self, name: &str) -> Option<(String, &'static str)> {
         match name {
-            "print" => (
+            "print" => Some((
                 "**print(expr)**\n\nBuilt-in function that prints the value of expr to the console.".to_string(),
                 "function"
-            ),
-            "input" => (
+            )),
+            "input" => Some((
                 "**input()**\n\nBuilt-in function that reads a string from the console.".to_string(),
                 "function"
-            ),
-            "len" => (
+            )),
+            "len" => Some((
                 "**len(str)**\n\nBuilt-in function that returns the length of str (string, array, or object).".to_string(),
                 "function"
-            ),
-            "type" => (
+            )),
+            "type" => Some((
                 "**type(expr)**\n\nBuilt-in function that returns the type of expr as a string.".to_string(),
                 "function"
-            ),
-            "str" => (
+            )),
+            "str" => Some((
                 "**str(num)**\n\nBuilt-in function that converts num to a string.".to_string(),
                 "function"
-            ),
-            "int" => (
+            )),
+            "int" => Some((
                 "**int(str)**\n\nBuilt-in function that converts str to an integer.".to_string(),
                 "function"
-            ),
-            "float" => (
+            )),
+            "float" => Some((
                 "**float(str)**\n\nBuilt-in function that converts str to a float.".to_string(),
                 "function"
-            ),
-            "random" => (
+            )),
+            "random" => Some((
                 "**random() | random(max) | random(min, max)**\n\nBuilt-in function that generates a random number.".to_string(),
                 "function"
-            ),
-            "push" => (
+            )),
+            "push" => Some((
                 "**push(array, item)**\n\nBuilt-in function that adds an item to an array.".to_string(),
                 "function"
-            ),
-            "pop" => (
+            )),
+            "pop" => Some((
                 "**pop(array)**\n\nBuilt-in function that removes and returns the last item from an array.".to_string(),
                 "function"
-            ),
-            "true" => (
-                "**true**\n\nBoolean true value.".to_string(),
-                "boolean"
-            ),
-            "false" => (
-                "**false**\n\nBoolean false value.".to_string(),
-                "boolean"
-            ),
-            "nil" => (
-                "**nil**\n\nNull/empty value.".to_string(),
-                "nil"
-            ),
-            _ => (
-                format!("**{}**\n\nIdentifier (variable or function)", name),
-                "identifier"
-            ),
+            )),
+            _ => None,
         }
     }
 }

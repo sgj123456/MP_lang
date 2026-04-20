@@ -10,16 +10,20 @@ use crate::lsp::definition::MpDefinition;
 use crate::lsp::diagnostics::MpDiagnostics;
 use crate::lsp::hover::MpHover;
 use crate::lsp::symbols::MpSymbols;
+use crate::lsp::workspace_symbols::MpWorkspaceSymbols;
 
 #[derive(Debug)]
 pub struct MpLanguageServer {
     client: Client,
+    #[allow(dead_code)]
     documents: Arc<RwLock<HashMap<String, String>>>,
     completer: MpCompleter,
     diagnostics: MpDiagnostics,
     hover: MpHover,
     symbols: MpSymbols,
     definition: MpDefinition,
+    #[allow(dead_code)]
+    workspace_symbols: MpWorkspaceSymbols,
 }
 
 impl MpLanguageServer {
@@ -32,6 +36,7 @@ impl MpLanguageServer {
             hover: MpHover::new(),
             symbols: MpSymbols::new(),
             definition: MpDefinition::new(),
+            workspace_symbols: MpWorkspaceSymbols::new(),
         }
     }
 }
@@ -58,6 +63,7 @@ impl LanguageServer for MpLanguageServer {
                 document_symbol_provider: Some(OneOf::Left(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             ..Default::default()

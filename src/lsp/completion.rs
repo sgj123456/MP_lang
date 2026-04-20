@@ -1,4 +1,5 @@
 use crate::lexer::{TokenKind, tokenize};
+use crate::parser::{StmtKind, parse};
 use tower_lsp::lsp_types::*;
 
 #[derive(Debug)]
@@ -178,9 +179,26 @@ impl MpCompleter {
 
     fn get_variable_completions(&self, content: &str, position: Position) -> Vec<CompletionItem> {
         let mut items = Vec::new();
-        let mut variables = std::collections::HashSet::new();
+        let mut variables: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
 
         if let Ok(tokens) = tokenize(content) {
+            if let Ok(ast) = parse(tokens.clone()) {
+                for stmt in &ast {
+                    match &stmt.kind {
+                        StmtKind::Let { name, value } => {
+                            let var_type = self.infer_type(value);
+                            variables.insert(name.clone(), var_type);
+                        }
+                        StmtKind::Function { name, params, .. } => {
+                            let params_str = params.join(", ");
+                            variables.insert(name.clone(), format!("fn({})", params_str));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
             let mut iter = tokens.iter().peekable();
             while let Some(token) = iter.next() {
                 if let TokenKind::Identifier(name) = &token.kind
@@ -189,28 +207,89 @@ impl MpCompleter {
                     if let Some(next_token) = iter.peek()
                         && matches!(next_token.kind, TokenKind::Assign)
                     {
-                        variables.insert(name.clone());
+                        if !variables.contains_key(name) {
+                            variables.insert(name.clone(), "Unknown".to_string());
+                        }
                     }
-
-                    if let TokenKind::Fn = &token.kind {
-                        continue;
-                    }
-
-                    variables.insert(name.clone());
                 }
             }
         }
 
-        for var in variables {
+        for (var, var_type) in variables {
+            let kind = if var_type.starts_with("fn(") {
+                Some(CompletionItemKind::FUNCTION)
+            } else {
+                Some(CompletionItemKind::VARIABLE)
+            };
+
             items.push(CompletionItem {
                 label: var,
-                kind: Some(CompletionItemKind::VARIABLE),
-                detail: Some("Variable".to_string()),
+                kind,
+                detail: Some(var_type),
                 ..Default::default()
             });
         }
 
         items
+    }
+
+    fn infer_type(&self, expr: &crate::parser::Expr) -> String {
+        use crate::parser::ExprKind;
+        match &expr.kind {
+            ExprKind::Number(_) => "Number".to_string(),
+            ExprKind::String(_) => "String".to_string(),
+            ExprKind::Boolean(_) => "Boolean".to_string(),
+            ExprKind::Array(items) => {
+                if let Some(first) = items.first() {
+                    let elem_type = self.infer_type(first);
+                    format!("Array<{}>", elem_type)
+                } else {
+                    "Array".to_string()
+                }
+            }
+            ExprKind::Object(fields) => {
+                if fields.is_empty() {
+                    "Object".to_string()
+                } else {
+                    let field_types: Vec<String> = fields
+                        .iter()
+                        .map(|(k, v)| format!("{}: {}", k, self.infer_type(v)))
+                        .collect();
+                    format!("Object {{ {} }}", field_types.join(", "))
+                }
+            }
+            ExprKind::FunctionCall { name, args } => self.get_function_return_type(name, args),
+            ExprKind::Variable(_) => "Unknown".to_string(),
+            _ => "Unknown".to_string(),
+        }
+    }
+
+    fn get_function_return_type(&self, name: &str, args: &[crate::parser::Expr]) -> String {
+        match name {
+            "len" => "Number".to_string(),
+            "type" => "String".to_string(),
+            "str" => "String".to_string(),
+            "int" => "Number".to_string(),
+            "float" => "Number".to_string(),
+            "input" => "String".to_string(),
+            "random" => "Number".to_string(),
+            "push" => {
+                if let Some(first) = args.first() {
+                    self.infer_type(first)
+                } else {
+                    "Unknown".to_string()
+                }
+            }
+            "pop" => {
+                if let Some(first) = args.first() {
+                    self.infer_type(first)
+                } else {
+                    "Unknown".to_string()
+                }
+            }
+            "print" => "Nil".to_string(),
+            _ => "Unknown".to_string(),
+        }
     }
 
     fn get_function_argument_completions(&self, func_name: &str) -> Vec<CompletionItem> {

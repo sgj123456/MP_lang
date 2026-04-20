@@ -22,9 +22,7 @@ pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let ast = parser::parse(tokens)?;
     let result = runtime::eval::eval(ast);
     match result {
-        Ok(value) | Err(InterpreterError::Return(value)) => {
-            println!("=> {value:?}")
-        }
+        Ok(_) | Err(InterpreterError::Return(_)) => {}
         Err(e) => eprintln!("Execution error: {e}"),
     }
     Ok(())
@@ -44,7 +42,6 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
         }
         _ => match lexer::tokenize(cmd) {
             Ok(tokens) => {
-                dbg!(&tokens);
                 let ast = match parser::parse(tokens) {
                     Ok(ast) => ast,
                     Err(e) => {
@@ -52,7 +49,6 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
                         return true;
                     }
                 };
-                dbg!(&ast);
                 match runtime::eval::eval_with_env(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),

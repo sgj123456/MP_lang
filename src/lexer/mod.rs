@@ -312,6 +312,28 @@ impl<'a> Cursor<'a> {
             '-' => TokenKind::Minus,
             '*' => TokenKind::Multiply,
             '/' => TokenKind::Divide,
+            '&' => {
+                if self.peek_n(1) == Some('&') {
+                    self.bump();
+                    self.bump();
+                    return Some(Token {
+                        kind: TokenKind::LogicalAnd,
+                        span: self.span(),
+                    });
+                }
+                return None;
+            }
+            '|' => {
+                if self.peek_n(1) == Some('|') {
+                    self.bump();
+                    self.bump();
+                    return Some(Token {
+                        kind: TokenKind::LogicalOr,
+                        span: self.span(),
+                    });
+                }
+                return None;
+            }
             '=' => {
                 if self.peek_n(1) == Some('=') {
                     self.bump();
@@ -332,7 +354,11 @@ impl<'a> Cursor<'a> {
                         span: self.span(),
                     });
                 }
-                return None;
+                self.bump();
+                return Some(Token {
+                    kind: TokenKind::Not,
+                    span: self.span(),
+                });
             }
             '>' => {
                 if self.peek_n(1) == Some('=') {

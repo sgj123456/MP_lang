@@ -213,6 +213,20 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                         )))
                     }
                 }
+                (Value::String(s), Value::Number(num)) => {
+                    let idx = num.to_int() as isize;
+                    let len = s.len() as isize;
+                    let actual_idx = if idx < 0 { len + idx } else { idx };
+                    if actual_idx >= 0 && actual_idx < len {
+                        let ch = s.chars().nth(actual_idx as usize).unwrap();
+                        Ok(Value::String(ch.to_string()))
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "String index out of bounds: {} (length: {})",
+                            idx, len
+                        )))
+                    }
+                }
                 (Value::Object(obj), Value::String(key)) => {
                     if let Some(value) = obj.get(&key) {
                         Ok(value.clone())
