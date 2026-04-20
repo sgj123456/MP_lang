@@ -34,6 +34,12 @@ impl Number {
             Number::Float(f) => *f,
         }
     }
+    pub fn to_bool(&self) -> bool {
+        match self {
+            Number::Int(i) => *i != 0,
+            Number::Float(f) => *f != 0.0,
+        }
+    }
 }
 
 impl Display for Number {

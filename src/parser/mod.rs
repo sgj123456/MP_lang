@@ -189,13 +189,51 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Result<Expr, ParserError> {
-        let mut expr = self.term()?;
+        let mut expr = self.logical_or()?;
 
         while self.match_token(&TokenKind::GreaterThan)
             || self.match_token(&TokenKind::GreaterThanOrEqual)
             || self.match_token(&TokenKind::LessThan)
             || self.match_token(&TokenKind::LessThanOrEqual)
         {
+            let op = self.previous().to_owned().kind;
+            let right = self.logical_or()?;
+            expr = Expr {
+                kind: ExprKind::BinaryOp {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+                span: self.previous().span,
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn logical_or(&mut self) -> Result<Expr, ParserError> {
+        let mut expr = self.logical_and()?;
+
+        while self.match_token(&TokenKind::LogicalOr) {
+            let op = self.previous().to_owned().kind;
+            let right = self.logical_and()?;
+            expr = Expr {
+                kind: ExprKind::BinaryOp {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+                span: self.previous().span,
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn logical_and(&mut self) -> Result<Expr, ParserError> {
+        let mut expr = self.term()?;
+
+        while self.match_token(&TokenKind::LogicalAnd) {
             let op = self.previous().to_owned().kind;
             let right = self.term()?;
             expr = Expr {

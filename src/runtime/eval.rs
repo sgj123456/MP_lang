@@ -92,11 +92,29 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                     TokenKind::LessThanOrEqual => Ok(Value::Boolean(l <= r)),
                     TokenKind::Equal => Ok(Value::Boolean(l == r)),
                     TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
+                    TokenKind::LogicalAnd => Ok(Value::Boolean(l.to_bool() && r.to_bool())),
+                    TokenKind::LogicalOr => Ok(Value::Boolean(l.to_bool() || r.to_bool())),
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 (Value::Boolean(l), Value::Boolean(r)) => match op {
                     TokenKind::Equal => Ok(Value::Boolean(l == r)),
                     TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
+                    TokenKind::LogicalAnd => Ok(Value::Boolean(l && r)),
+                    TokenKind::LogicalOr => Ok(Value::Boolean(l || r)),
+                    _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
+                },
+                (Value::String(l), Value::String(r)) => match op {
+                    TokenKind::Equal => Ok(Value::Boolean(l == r)),
+                    TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
+                    TokenKind::LogicalAnd | TokenKind::LogicalOr => {
+                        let bool_l = !l.is_empty();
+                        let bool_r = !r.is_empty();
+                        match op {
+                            TokenKind::LogicalAnd => Ok(Value::Boolean(bool_l && bool_r)),
+                            TokenKind::LogicalOr => Ok(Value::Boolean(bool_l || bool_r)),
+                            _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
+                        }
+                    },
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 _ => Err(InterpreterError::TypeMismatch(
