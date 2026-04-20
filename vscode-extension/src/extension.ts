@@ -13,9 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
     
     // 注册命令
     context.subscriptions.push(
-        vscode.commands.registerCommand('mp-lang.build-server', buildServer)
-    );
-    context.subscriptions.push(
         vscode.commands.registerCommand('mp-lang.restart-server', restartServer)
     );
     context.subscriptions.push(
@@ -36,70 +33,15 @@ async function startServer(_context?: vscode.ExtensionContext) {
         }
         outputChannel.appendLine('📡 正在启动 MP Language LSP 服务器...');
         
-        // 获取服务器路径
         const configServerPath = vscode.workspace.getConfiguration('mp-lang.lsp').get('server', '');
-        let serverModule;
+        let serverModule: string;
         
         if (configServerPath) {
             serverModule = configServerPath;
             outputChannel.appendLine(`使用自定义路径：${serverModule}`);
         } else {
-            // 自动检测工作区中的 MP 项目
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders && workspaceFolders.length > 0) {
-                let workspaceRoot = workspaceFolders[0].uri.fsPath;
-                
-                // 查找包含 target 目录的实际项目根目录
-                const path = require('path');
-                const fs = require('fs');
-                let projectRoot = workspaceRoot;
-                let currentDir = workspaceRoot;
-                let maxDepth = 5; // 最多向上查找 5 层
-                let depth = 0;
-                
-                while (depth < maxDepth) {
-                    const targetDir = path.join(currentDir, 'target');
-                    if (fs.existsSync(targetDir)) {
-                        projectRoot = currentDir;
-                        break;
-                    }
-                    
-                    const parentDir = path.dirname(currentDir);
-                    if (parentDir === currentDir) {
-                        break; // 已到达根目录
-                    }
-                    currentDir = parentDir;
-                    depth++;
-                }
-                
-                // 优先使用 release 版本
-                const releasePath = `${projectRoot}\\target\\release\\mp-lang-lsp.exe`;
-                const debugPath = `${projectRoot}\\target\\debug\\mp-lang-lsp.exe`;
-                
-                if (fs.existsSync(releasePath)) {
-                    serverModule = releasePath;
-                    outputChannel.appendLine(`✓ 找到 Release 版本：${releasePath}`);
-                } else if (fs.existsSync(debugPath)) {
-                    serverModule = debugPath;
-                    outputChannel.appendLine(`✓ 找到 Debug 版本：${debugPath}`);
-                } else {
-                    // 尝试构建
-                    outputChannel.appendLine('⚠️ 未找到 LSP 服务器，正在构建...');
-                    workspaceRoot = projectRoot; // 使用项目根目录进行构建
-                    await buildServer();
-                    
-                    // 重新检查
-                    if (fs.existsSync(releasePath)) {
-                        serverModule = releasePath;
-                    } else if (fs.existsSync(debugPath)) {
-                        serverModule = debugPath;
-                    } else {
-                        throw new Error('构建失败，未找到 LSP 服务器可执行文件');
-                    }
-                }
-            } else {
-                throw new Error('请先打开包含 MP 项目的工作区文件夹');
-            }
+            serverModule = 'mp-lang-lsp';
+            outputChannel.appendLine(`使用环境变量中的 LSP：${serverModule}`);
         }
         
         // 服务器选项
@@ -156,71 +98,11 @@ async function startServer(_context?: vscode.ExtensionContext) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '未知错误';
         outputChannel?.appendLine(`❌ 启动失败：${errorMessage}`);
-        vscode.window.showErrorMessage(`MP Language LSP 启动失败：${errorMessage}`, '查看输出', '构建服务器').then(selection => {
+        vscode.window.showErrorMessage(`MP Language LSP 启动失败：${errorMessage}`, '查看输出').then(selection => {
             if (selection === '查看输出') {
                 outputChannel?.show();
-            } else if (selection === '构建服务器') {
-                buildServer();
             }
         });
-    }
-}
-
-/**
- * 构建 LSP 服务器
- */
-async function buildServer() {
-    if (!outputChannel) {
-        outputChannel = vscode.window.createOutputChannel('MP Language', 'mp-lang');
-    }
-    outputChannel.appendLine('🔨 正在构建 MP Language LSP 服务器...');
-    vscode.window.showInformationMessage('正在构建 LSP 服务器，请稍候...');
-    
-    try {
-        const { exec } = require('child_process');
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-            throw new Error('请先打开工作区');
-        }
-        
-        const workspaceRoot = workspaceFolders[0].uri.fsPath;
-        
-        // 执行 cargo build --release
-        await new Promise<void>((resolve, reject) => {
-            const buildProcess = exec('cargo build --release', {
-                cwd: workspaceRoot,
-                env: process.env
-            });
-            
-            buildProcess.stdout.on('data', (data: Buffer) => {
-                outputChannel?.append(data.toString());
-            });
-            
-            buildProcess.stderr.on('data', (data: Buffer) => {
-                outputChannel?.append(data.toString());
-            });
-            
-            buildProcess.on('close', (code: number | null) => {
-                if (code === 0) {
-                    resolve();
-                } else {
-                    reject(new Error(`构建失败，退出码：${code ?? -1}`));
-                }
-            });
-        });
-        
-        outputChannel.appendLine('✅ 构建成功！');
-        vscode.window.showInformationMessage('LSP 服务器构建成功！', '重启服务器').then(selection => {
-            if (selection === '重启服务器') {
-                restartServer();
-            }
-        });
-        
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '未知错误';
-        outputChannel.appendLine(`❌ 构建失败：${errorMessage}`);
-        vscode.window.showErrorMessage(`构建失败：${errorMessage}`, '查看输出');
     }
 }
 

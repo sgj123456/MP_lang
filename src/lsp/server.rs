@@ -58,9 +58,6 @@ impl LanguageServer for MpLanguageServer {
                 document_symbol_provider: Some(OneOf::Left(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
-                diagnostic_provider: Some(
-                    DiagnosticServerCapabilities::Options(Default::default()),
-                ),
                 ..Default::default()
             },
             ..Default::default()

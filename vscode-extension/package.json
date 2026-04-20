@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "mp-lang",
   "engines": {
-    "vscode": "^1.50.0"
+    "vscode": "^1.116.0"
   },
   "categories": [
     "Programming Languages",
@@ -13,6 +13,9 @@
     "Snippets"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/*.mp"
+  ],
   "contributes": {
     "languages": [
       {
@@ -25,11 +28,7 @@
         "extensions": [
           ".mp"
         ],
-        "configuration": "./language-configuration.json",
-        "icon": {
-          "light": "./icons/mp-icon.png",
-          "dark": "./icons/mp-icon.png"
-        }
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
@@ -46,7 +45,7 @@
         "mp-lang.lsp.server": {
           "type": "string",
           "default": "",
-          "description": "MP Language LSP 服务器可执行文件路径（留空则自动使用项目中的构建版本）"
+          "description": "MP Language LSP 服务器可执行文件路径（留空则使用环境变量中的 mp-lang-lsp）"
         },
         "mp-lang.trace.server": {
           "type": "string",
@@ -61,10 +60,6 @@
       }
     },
     "commands": [
-      {
-        "command": "mp-lang.build-server",
-        "title": "MP Language: 构建 LSP 服务器"
-      },
       {
         "command": "mp-lang.restart-server",
         "title": "MP Language: 重启 LSP 服务器"
@@ -87,6 +82,7 @@
   "scripts": {
     "lint": "eslint .",
     "compile": "tsc -p ./",
+    "package": "tsc && vsce package",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run lint",
     "test": "node ./test/runTest.js"
@@ -118,6 +114,5 @@
   "bugs": {
     "url": "https://github.com/your-repo/mp-lang/issues"
   },
-  "homepage": "https://github.com/your-repo/mp-lang#readme",
-  "icon": "icons/mp-icon.png"
+  "homepage": "https://github.com/your-repo/mp-lang#readme"
 }
