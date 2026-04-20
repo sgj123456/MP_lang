@@ -287,6 +287,10 @@ impl MpHover {
                 "**pop(array)**\n\nBuilt-in function that removes and returns the last item from an array.".to_string(),
                 "function"
             )),
+            "time" => Some((
+                "**time()**\n\nBuilt-in function that returns the current Unix timestamp in seconds.".to_string(),
+                "function"
+            )),
             _ => None,
         }
     }

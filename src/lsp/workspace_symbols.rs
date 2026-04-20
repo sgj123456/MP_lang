@@ -21,17 +21,15 @@ impl MpWorkspaceSymbols {
         let mut symbols = Vec::new();
         let query_lower = query.to_lowercase();
 
-        if let Ok(tokens) = tokenize(query) {
-            if let Ok(ast) = parse(tokens) {
+        if let Ok(tokens) = tokenize(query)
+            && let Ok(ast) = parse(tokens) {
                 for stmt in ast {
-                    if let Some(info) = self.extract_symbol(&stmt, uri) {
-                        if query.is_empty() || info.name.to_lowercase().contains(&query_lower) {
+                    if let Some(info) = self.extract_symbol(&stmt, uri)
+                        && (query.is_empty() || info.name.to_lowercase().contains(&query_lower)) {
                             symbols.push(info);
                         }
-                    }
                 }
             }
-        }
 
         symbols
     }

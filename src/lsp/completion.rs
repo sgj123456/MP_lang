@@ -24,7 +24,7 @@ impl MpCompleter {
                 "nil",
             ],
             builtin_functions: vec![
-                "print", "input", "len", "type", "str", "int", "float", "random", "push", "pop",
+                "print", "input", "len", "type", "str", "int", "float", "random", "push", "pop", "time",
             ],
             builtin_types: vec![
                 "Number", "String", "Boolean", "Array", "Object", "Function", "Nil",
@@ -203,15 +203,11 @@ impl MpCompleter {
             while let Some(token) = iter.next() {
                 if let TokenKind::Identifier(name) = &token.kind
                     && token.span.line <= position.line as usize
-                {
-                    if let Some(next_token) = iter.peek()
+                    && let Some(next_token) = iter.peek()
                         && matches!(next_token.kind, TokenKind::Assign)
-                    {
-                        if !variables.contains_key(name) {
+                        && !variables.contains_key(name) {
                             variables.insert(name.clone(), "Unknown".to_string());
                         }
-                    }
-                }
             }
         }
 
@@ -273,6 +269,7 @@ impl MpCompleter {
             "float" => "Number".to_string(),
             "input" => "String".to_string(),
             "random" => "Number".to_string(),
+            "time" => "Number".to_string(),
             "push" => {
                 if let Some(first) = args.first() {
                     self.infer_type(first)
@@ -348,6 +345,7 @@ impl MpCompleter {
             }
             "push" => "push(array, item) - Add item to array".to_string(),
             "pop" => "pop(array) - Remove and return last item from array".to_string(),
+            "time" => "time() - Get current Unix timestamp in seconds".to_string(),
             _ => "Built-in function".to_string(),
         }
     }

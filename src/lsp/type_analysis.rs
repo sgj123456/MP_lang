@@ -1,6 +1,7 @@
 use crate::lexer::{TokenKind, tokenize};
 use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse};
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeInfo {
@@ -17,32 +18,33 @@ pub enum TypeInfo {
     Nil,
 }
 
-impl TypeInfo {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for TypeInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TypeInfo::Number => "Number".to_string(),
-            TypeInfo::String => "String".to_string(),
-            TypeInfo::Boolean => "Boolean".to_string(),
-            TypeInfo::Array(elem) => format!("Array<{}>", elem.to_string()),
+            TypeInfo::Number => write!(f, "Number"),
+            TypeInfo::String => write!(f, "String"),
+            TypeInfo::Boolean => write!(f, "Boolean"),
+            TypeInfo::Array(elem) => write!(f, "Array< {}>", elem),
             TypeInfo::Object(fields) => {
                 let fields_str: Vec<String> = fields
                     .iter()
-                    .map(|(k, v)| format!("{}: {}", k, v.to_string()))
+                    .map(|(k, v)| format!("{}: {}", k, v))
                     .collect();
-                format!("Object {{ {} }}", fields_str.join(", "))
+                write!(f, "Object {{ {} }}", fields_str.join(", "))
             }
             TypeInfo::Function {
                 params,
                 return_type,
             } => {
                 let params_str = params.join(", ");
-                format!("fn({}) -> {}", params_str, return_type.to_string())
+                write!(f, "fn({}) -> {}", params_str, return_type)
             }
-            TypeInfo::Unknown => "Unknown".to_string(),
-            TypeInfo::Nil => "Nil".to_string(),
+            TypeInfo::Unknown => write!(f, "Unknown"),
+            TypeInfo::Nil => write!(f, "Nil"),
         }
     }
-
+}
+impl TypeInfo {
     pub fn from_expr(expr: &Expr) -> Self {
         match &expr.kind {
             ExprKind::Number(_) => TypeInfo::Number,
@@ -125,10 +127,10 @@ impl TypeInfo {
             "input" => TypeInfo::String,
             "random" => TypeInfo::Number,
             "push" | "pop" => {
-                if let Some(ExprKind::Array(items)) = args.first().map(|e| &e.kind) {
-                    if let Some(first) = items.first() {
-                        return TypeInfo::from_expr(first);
-                    }
+                if let Some(ExprKind::Array(items)) = args.first().map(|e| &e.kind)
+                    && let Some(first) = items.first()
+                {
+                    return TypeInfo::from_expr(first);
                 }
                 TypeInfo::Unknown
             }
@@ -153,11 +155,11 @@ impl TypeAnalyzer {
     }
 
     pub fn analyze(&mut self, content: &str) {
-        if let Ok(tokens) = tokenize(content) {
-            if let Ok(ast) = parse(tokens) {
-                for stmt in ast {
-                    self.analyze_stmt(&stmt);
-                }
+        if let Ok(tokens) = tokenize(content)
+            && let Ok(ast) = parse(tokens)
+        {
+            for stmt in ast {
+                self.analyze_stmt(&stmt);
             }
         }
     }

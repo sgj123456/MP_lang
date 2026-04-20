@@ -24,6 +24,7 @@ pub enum BuiltinFunction {
     Type,
     Push,
     Pop,
+    Time,
 }
 
 fn print(args: Vec<Value>) -> Result<Value, InterpreterError> {
@@ -152,6 +153,14 @@ fn random(args: Vec<Value>) -> Result<Value, InterpreterError> {
     }
 }
 
+fn time() -> Result<Value, InterpreterError> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    Ok(Value::Number(Number::Int(now as i128)))
+}
+
 impl Fun for BuiltinFunction {
     fn call(
         &self,
@@ -169,6 +178,7 @@ impl Fun for BuiltinFunction {
             BuiltinFunction::Len => len(args),
             BuiltinFunction::Type => type_of(args),
             BuiltinFunction::Random => random(args),
+            BuiltinFunction::Time => time(),
         }
     }
 }

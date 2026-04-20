@@ -66,9 +66,9 @@ impl MpDefinition {
         let ast = parse(tokens.to_vec()).ok()?;
 
         for stmt in &ast {
-            if let StmtKind::Function { name, .. } = &stmt.kind {
-                if name == target_name {
-                    if let Some(token) = self.find_token_by_name(name, tokens) {
+            if let StmtKind::Function { name, .. } = &stmt.kind
+                && name == target_name
+                    && let Some(token) = self.find_token_by_name(name, tokens) {
                         let location = Location {
                             uri: url::Url::parse(uri).unwrap(),
                             range: Range {
@@ -84,8 +84,6 @@ impl MpDefinition {
                         };
                         return Some(GotoDefinitionResponse::Scalar(location));
                     }
-                }
-            }
         }
 
         None
@@ -234,6 +232,7 @@ impl MpDefinition {
                 | "random"
                 | "push"
                 | "pop"
+                | "time"
         )
     }
 }
