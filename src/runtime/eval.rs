@@ -30,10 +30,7 @@ pub fn eval_with_env(
     Ok(result)
 }
 
-pub fn eval_stmt(
-    stmt: &Stmt,
-    env: &Rc<RefCell<Environment>>,
-) -> Result<Value, InterpreterError> {
+pub fn eval_stmt(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, InterpreterError> {
     match &stmt.kind {
         StmtKind::Expr(expr) => {
             eval_expr(expr, env)?;
@@ -57,10 +54,7 @@ pub fn eval_stmt(
     }
 }
 
-pub fn eval_expr(
-    expr: &Expr,
-    env: &Rc<RefCell<Environment>>,
-) -> Result<Value, InterpreterError> {
+pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, InterpreterError> {
     match &expr.kind {
         ExprKind::Number(n) => Ok(Value::Number(n.clone())),
         ExprKind::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -73,7 +67,7 @@ pub fn eval_expr(
         ExprKind::BinaryOp { left, op, right } => {
             if let TokenKind::Assign = op {
                 if let ExprKind::Variable(name) = &left.as_ref().kind {
-                    let right_value = eval_expr(&right, env)?;
+                    let right_value = eval_expr(right, env)?;
                     env.borrow_mut()
                         .assign(name.as_str(), right_value.clone())?;
                     return Ok(right_value);
@@ -83,8 +77,8 @@ pub fn eval_expr(
                 ));
             }
 
-            let left_value = eval_expr(&left, env)?;
-            let right_value = eval_expr(&right, env)?;
+            let left_value = eval_expr(left, env)?;
+            let right_value = eval_expr(right, env)?;
 
             match (left_value, right_value) {
                 (Value::Number(l), Value::Number(r)) => match op {
@@ -111,7 +105,7 @@ pub fn eval_expr(
             }
         }
         ExprKind::UnaryOp { op, expr } => {
-            let value = eval_expr(&expr, env)?;
+            let value = eval_expr(expr, env)?;
             match (op, value) {
                 (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
@@ -183,7 +177,7 @@ pub fn eval_expr(
             if result.is_empty() {
                 Ok(Value::Nil)
             } else {
-                Ok(Value::Array(result))
+                Ok(Value::Array(Rc::new(RefCell::new(result))))
             }
         }
         ExprKind::Array(values) => {
@@ -191,7 +185,7 @@ pub fn eval_expr(
                 .iter()
                 .map(|value| eval_expr(value, env))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(Value::Array(evaluated_values))
+            Ok(Value::Array(Rc::new(RefCell::new(evaluated_values))))
         }
         ExprKind::Object(vec) => {
             let mut object = HashMap::new();
@@ -208,6 +202,7 @@ pub fn eval_expr(
             match (obj_value, index_value) {
                 (Value::Array(arr), Value::Number(num)) => {
                     let idx = num.to_int() as usize;
+                    let arr = arr.borrow();
                     if idx < arr.len() {
                         Ok(arr[idx].clone())
                     } else {

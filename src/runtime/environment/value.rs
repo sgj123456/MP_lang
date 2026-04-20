@@ -1,7 +1,9 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
     fmt::{self, Display},
     ops::{Add, Div, Mul, Neg, Sub},
+    rc::Rc,
     str::FromStr,
 };
 
@@ -158,7 +160,7 @@ pub enum Value {
     Number(Number),
     Boolean(bool),
     String(String),
-    Array(Vec<Value>),
+    Array(Rc<RefCell<Vec<Value>>>),
     Object(HashMap<String, Value>),
     Nil,
 }
@@ -173,6 +175,7 @@ impl fmt::Display for Value {
             Value::Boolean(b) => write!(f, "{b}"),
             Value::String(s) => write!(f, "{s}"),
             Value::Array(v) => {
+                let v = v.borrow();
                 write!(f, "[")?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 {

@@ -1,8 +1,14 @@
+use crate::lexer::{TokenKind, tokenize};
 use tower_lsp::lsp_types::*;
-use crate::lexer::{tokenize, TokenKind};
 
 #[derive(Debug)]
 pub struct MpHover;
+
+impl Default for MpHover {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl MpHover {
     pub fn new() -> Self {
@@ -11,10 +17,10 @@ impl MpHover {
 
     pub fn hover(&self, content: &str, position: Position) -> Option<Hover> {
         let tokens = tokenize(content).ok()?;
-        
+
         let line = position.line as usize + 1;
         let col = position.character as usize + 1;
-        
+
         for (i, token) in tokens.iter().enumerate() {
             if token.span.line == line && token.span.column <= col {
                 if let Some(next_token) = tokens.get(i + 1) {
@@ -26,7 +32,7 @@ impl MpHover {
                 }
             }
         }
-        
+
         None
     }
 

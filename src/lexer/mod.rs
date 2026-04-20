@@ -171,11 +171,7 @@ impl<'a> Cursor<'a> {
             }
         }
 
-        let kind = if has_dot {
-            TokenKind::Number(num_str.parse().ok()?)
-        } else {
-            TokenKind::Number(num_str.parse().ok()?)
-        };
+        let kind = TokenKind::Number(num_str.parse().ok()?);
 
         Some(Token {
             kind,

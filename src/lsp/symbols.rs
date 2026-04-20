@@ -1,10 +1,16 @@
-use tower_lsp::lsp_types::*;
-use crate::lexer::tokenize;
 use crate::lexer::TokenKind;
-use crate::parser::{parse, Expr, ExprKind, Stmt, StmtKind};
+use crate::lexer::tokenize;
+use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse};
+use tower_lsp::lsp_types::*;
 
 #[derive(Debug)]
 pub struct MpSymbols;
+
+impl Default for MpSymbols {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl MpSymbols {
     pub fn new() -> Self {
@@ -14,11 +20,11 @@ impl MpSymbols {
     pub fn symbols(&self, content: &str) -> Vec<DocumentSymbol> {
         let mut symbols = Vec::new();
 
-        if let Ok(tokens) = tokenize(content) {
-            if let Ok(ast) = parse(tokens.clone()) {
-                for stmt in ast {
-                    self.extract_symbol_from_stmt(&stmt, &tokens, &mut symbols);
-                }
+        if let Ok(tokens) = tokenize(content)
+            && let Ok(ast) = parse(tokens.clone())
+        {
+            for stmt in ast {
+                self.extract_symbol_from_stmt(&stmt, &tokens, &mut symbols);
             }
         }
 
@@ -68,26 +74,32 @@ impl MpSymbols {
     }
 
     fn find_token_range(&self, name: &str, tokens: &[crate::lexer::Token]) -> Range {
-        for (_i, token) in tokens.iter().enumerate() {
-            if let TokenKind::Identifier(id) = &token.kind {
-                if id == name {
-                    let end_col = token.span.column + name.len();
-                    return Range {
-                        start: Position {
-                            line: (token.span.line - 1) as u32,
-                            character: (token.span.column - 1) as u32,
-                        },
-                        end: Position {
-                            line: (token.span.line - 1) as u32,
-                            character: end_col as u32,
-                        },
-                    };
-                }
+        for token in tokens.iter() {
+            if let TokenKind::Identifier(id) = &token.kind
+                && id == name
+            {
+                let end_col = token.span.column + name.len();
+                return Range {
+                    start: Position {
+                        line: (token.span.line - 1) as u32,
+                        character: (token.span.column - 1) as u32,
+                    },
+                    end: Position {
+                        line: (token.span.line - 1) as u32,
+                        character: end_col as u32,
+                    },
+                };
             }
         }
         Range {
-            start: Position { line: 0, character: 0 },
-            end: Position { line: 0, character: 0 },
+            start: Position {
+                line: 0,
+                character: 0,
+            },
+            end: Position {
+                line: 0,
+                character: 0,
+            },
         }
     }
 

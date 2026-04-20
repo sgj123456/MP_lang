@@ -1,9 +1,15 @@
-use tower_lsp::{Client, lsp_types::*};
-use crate::lexer::{tokenize, Span};
+use crate::lexer::{Span, tokenize};
 use crate::parser::parse;
+use tower_lsp::{Client, lsp_types::*};
 
 #[derive(Debug)]
 pub struct MpDiagnostics;
+
+impl Default for MpDiagnostics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl MpDiagnostics {
     pub fn new() -> Self {

@@ -1,11 +1,11 @@
 pub mod lexer;
+pub mod lsp;
 pub mod parser;
 pub mod runtime;
-pub mod lsp;
 
+pub use lsp::MpLanguageServer;
 pub use runtime::environment::{BuiltinFunction, Environment, UserFunction, Value};
 pub use runtime::error::InterpreterError;
-pub use lsp::MpLanguageServer;
 
 use rustyline::{
     Completer, Config, Editor, Helper, Highlighter, Hinter, Validator, error::ReadlineError,

@@ -65,10 +65,7 @@ impl Environment {
             "random".to_string(),
             EnvironmentValue::Function(Function::Builtin(BuiltinFunction::Random)),
         );
-        locals.insert(
-            "nil".to_string(),
-            EnvironmentValue::Variable(Value::Nil),
-        );
+        locals.insert("nil".to_string(), EnvironmentValue::Variable(Value::Nil));
 
         Self {
             locals,

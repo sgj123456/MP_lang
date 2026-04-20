@@ -43,9 +43,8 @@ fn input() -> Result<Value, InterpreterError> {
 fn push(args: Vec<Value>) -> Result<Value, InterpreterError> {
     match args.as_slice() {
         [Value::Array(v), item] => {
-            let mut new_vec = v.clone();
-            new_vec.push(item.clone());
-            Ok(Value::Array(new_vec))
+            v.borrow_mut().push(item.clone());
+            Ok(Value::Array(v.clone()))
         }
         _ => Err(InterpreterError::TypeMismatch(
             "push() expects a vector and an item".to_string(),
@@ -55,9 +54,8 @@ fn push(args: Vec<Value>) -> Result<Value, InterpreterError> {
 
 fn pop(args: Vec<Value>) -> Result<Value, InterpreterError> {
     match args.first() {
-        Some(Value::Array(v)) if !v.is_empty() => {
-            let mut new_vec = v.clone();
-            let popped = new_vec.pop().unwrap();
+        Some(Value::Array(v)) if !v.borrow().is_empty() => {
+            let popped = v.borrow_mut().pop().unwrap();
             Ok(popped)
         }
         Some(Value::Array(_)) => Err(InterpreterError::InvalidOperation(
@@ -107,7 +105,7 @@ fn string(args: Vec<Value>) -> Result<Value, InterpreterError> {
 fn len(args: Vec<Value>) -> Result<Value, InterpreterError> {
     match args.first() {
         Some(Value::String(s)) => Ok(Value::Number(Number::Int(s.len() as i128))),
-        Some(Value::Array(arr)) => Ok(Value::Number(Number::Int(arr.len() as i128))),
+        Some(Value::Array(arr)) => Ok(Value::Number(Number::Int(arr.borrow().len() as i128))),
         Some(Value::Object(obj)) => Ok(Value::Number(Number::Int(obj.len() as i128))),
         _ => Err(InterpreterError::TypeMismatch(
             "len() expects a string, array, or object".to_string(),

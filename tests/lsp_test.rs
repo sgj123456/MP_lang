@@ -10,7 +10,7 @@ mod tests {
         let diagnostics = MpDiagnostics::new();
         let content = "";
         let result = diagnostics.analyze(content);
-        
+
         // Empty file should have no diagnostics
         assert_eq!(result.len(), 0, "Empty file should have no diagnostics");
     }
@@ -19,8 +19,14 @@ mod tests {
     fn test_completion_keywords() {
         let completer = MpCompleter::new();
         let content = "l";
-        let completions = completer.complete(content, Position { line: 0, character: 1 });
-        
+        let completions = completer.complete(
+            content,
+            Position {
+                line: 0,
+                character: 1,
+            },
+        );
+
         let has_let = completions.iter().any(|c| c.label == "let");
         assert!(has_let, "Completion should include 'let' keyword");
     }
@@ -29,8 +35,14 @@ mod tests {
     fn test_completion_builtin_functions() {
         let completer = MpCompleter::new();
         let content = "pr";
-        let completions = completer.complete(content, Position { line: 0, character: 2 });
-        
+        let completions = completer.complete(
+            content,
+            Position {
+                line: 0,
+                character: 2,
+            },
+        );
+
         let has_print = completions.iter().any(|c| c.label == "print");
         assert!(has_print, "Completion should include 'print' function");
     }
@@ -39,27 +51,51 @@ mod tests {
     fn test_hover_keywords() {
         let hover = MpHover::new();
         let content = "let";
-        let hover_result = hover.hover(content, Position { line: 0, character: 0 });
-        
+        let hover_result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
         // Hover at position 0 should work
-        assert!(hover_result.is_some() || !content.is_empty(), "Hover test executed");
+        assert!(
+            hover_result.is_some() || !content.is_empty(),
+            "Hover test executed"
+        );
     }
 
     #[test]
     fn test_hover_builtin_functions() {
         let hover = MpHover::new();
         let content = "print";
-        let hover_result = hover.hover(content, Position { line: 0, character: 0 });
-        
-        assert!(hover_result.is_some() || !content.is_empty(), "Hover test executed");
+        let hover_result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
+        assert!(
+            hover_result.is_some() || !content.is_empty(),
+            "Hover test executed"
+        );
     }
 
     #[test]
     fn test_completion_variables() {
         let completer = MpCompleter::new();
         let content = "let x = 10\nlet ";
-        let completions = completer.complete(content, Position { line: 1, character: 4 });
-        
+        let completions = completer.complete(
+            content,
+            Position {
+                line: 1,
+                character: 4,
+            },
+        );
+
         // Should suggest variables
         assert!(completions.len() > 0, "Should have completions");
     }
@@ -68,8 +104,14 @@ mod tests {
     fn test_hover_numbers() {
         let hover = MpHover::new();
         let content = "123";
-        let _hover_result = hover.hover(content, Position { line: 0, character: 0 });
-        
+        let _hover_result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
         // Test executes without panic
         assert!(true, "Hover test for numbers executed");
     }
@@ -78,8 +120,14 @@ mod tests {
     fn test_hover_strings() {
         let hover = MpHover::new();
         let content = "\"hello\"";
-        let _hover_result = hover.hover(content, Position { line: 0, character: 1 });
-        
+        let _hover_result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 1,
+            },
+        );
+
         // Test executes without panic
         assert!(true, "Hover test for strings executed");
     }
@@ -88,8 +136,14 @@ mod tests {
     fn test_completion_empty_line() {
         let completer = MpCompleter::new();
         let content = " ";
-        let _completions = completer.complete(content, Position { line: 0, character: 0 });
-        
+        let _completions = completer.complete(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
         // Should have some completions
         assert!(true, "Should have completions");
     }
@@ -98,8 +152,14 @@ mod tests {
     fn test_hover_operators() {
         let hover = MpHover::new();
         let content = "+";
-        let _hover_result = hover.hover(content, Position { line: 0, character: 0 });
-        
+        let _hover_result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
         // Test executes without panic
         assert!(true, "Hover test for operators executed");
     }

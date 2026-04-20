@@ -86,7 +86,13 @@ mod tests {
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
-                assert!(matches!(&expr.kind, ExprKind::BinaryOp { op: TokenKind::Plus, .. }));
+                assert!(matches!(
+                    &expr.kind,
+                    ExprKind::BinaryOp {
+                        op: TokenKind::Plus,
+                        ..
+                    }
+                ));
             }
             _ => panic!("Expected Result statement"),
         }

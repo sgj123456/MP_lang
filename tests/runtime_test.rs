@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
     use mp_lang::{
         lexer::tokenize,
         parser::parse,
@@ -99,11 +101,11 @@ mod tests {
         let result = eval(ast).unwrap();
         assert_eq!(
             result,
-            Value::Array(Vec::from([
+            Value::Array(Rc::new(RefCell::new(vec![
                 Value::Number(Number::Int(1)),
                 Value::Number(Number::Int(2)),
                 Value::Number(Number::Int(3))
-            ]))
+            ])))
         );
     }
 
@@ -141,7 +143,7 @@ mod tests {
         let tokens = tokenize("let v = [1, 2, 3]; push(v, 4); pop(v)").unwrap();
         let ast = parse(tokens).unwrap();
         let result = eval(ast).unwrap();
-        assert_eq!(result, Value::Number(Number::Int(3)));
+        assert_eq!(result, Value::Number(Number::Int(4)));
     }
 
     #[test]
