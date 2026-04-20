@@ -149,21 +149,25 @@ impl Parser {
 
         if self.match_token(&TokenKind::Assign) {
             let value = self.assignment()?;
-            if let ExprKind::Variable(_) = expr.kind.clone() {
-                return Ok(Expr {
-                    kind: ExprKind::BinaryOp {
-                        left: Box::new(expr),
-                        op: TokenKind::Assign,
-                        right: Box::new(value),
-                    },
-                    span: self.previous().span,
-                });
+            match expr.kind.clone() {
+                ExprKind::Variable(_) | ExprKind::Index { .. } => {
+                    return Ok(Expr {
+                        kind: ExprKind::BinaryOp {
+                            left: Box::new(expr),
+                            op: TokenKind::Assign,
+                            right: Box::new(value),
+                        },
+                        span: self.previous().span,
+                    });
+                }
+                _ => {
+                    return Err(ParserError::new(
+                        self.previous().span,
+                        error::ParserErrorKind::UnexpectedToken(self.previous().clone()),
+                        "Invalid assignment target: expected a variable name".into(),
+                    ));
+                }
             }
-            return Err(ParserError::new(
-                self.previous().span,
-                error::ParserErrorKind::UnexpectedToken(self.previous().clone()),
-                "Invalid assignment target: expected a variable name".into(),
-            ));
         }
 
         Ok(expr)

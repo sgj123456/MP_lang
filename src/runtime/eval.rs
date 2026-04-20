@@ -71,10 +71,68 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                     env.borrow_mut()
                         .assign(name.as_str(), right_value.clone())?;
                     return Ok(right_value);
+                } else if let ExprKind::Index { object, index } = &left.as_ref().kind {
+                    let obj_value = eval_expr(object, env)?;
+                    let index_value = eval_expr(index, env)?;
+                    let right_value = eval_expr(right, env)?;
+
+                    return match (obj_value, index_value) {
+                        (Value::Array(arr), Value::Number(num)) => {
+                            let idx = num.to_int() as usize;
+                            let mut arr_mut = arr.borrow_mut();
+                            if idx < arr_mut.len() {
+                                arr_mut[idx] = right_value.clone();
+                                Ok(right_value)
+                            } else {
+                                Err(InterpreterError::InvalidOperation(format!(
+                                    "Array index out of bounds: {} (length: {})",
+                                    idx,
+                                    arr_mut.len()
+                                )))
+                            }
+                        }
+                        (Value::String(s), Value::Number(num)) => {
+                            let idx = num.to_int() as isize;
+                            let len = s.len() as isize;
+                            let actual_idx = if idx < 0 { len + idx } else { idx };
+                            if actual_idx >= 0 && actual_idx < len {
+                                if let ExprKind::Variable(var_name) = &object.as_ref().kind {
+                                    let mut new_chars: Vec<char> = s.chars().collect();
+                                    let new_char = right_value.to_string();
+                                    if let Some(c) = new_char.chars().next() {
+                                        new_chars[actual_idx as usize] = c;
+                                        let new_string: String = new_chars.into_iter().collect();
+                                        let new_value = Value::String(new_string);
+                                        env.borrow_mut()
+                                            .assign(var_name.as_str(), new_value.clone())?;
+                                        Ok(right_value)
+                                    } else {
+                                        Err(InterpreterError::InvalidOperation(
+                                            "Cannot assign empty value to string index".to_string(),
+                                        ))
+                                    }
+                                } else {
+                                    Err(InterpreterError::InvalidOperation(
+                                        "Cannot assign to string index directly, use variable"
+                                            .to_string(),
+                                    ))
+                                }
+                            } else {
+                                Err(InterpreterError::InvalidOperation(format!(
+                                    "String index out of bounds: {} (length: {})",
+                                    idx, len
+                                )))
+                            }
+                        }
+                        _ => Err(InterpreterError::TypeMismatch(
+                            "Index assignment requires array or string".to_string(),
+                        )),
+                    };
+                } else {
+                    return Err(InterpreterError::InvalidOperation(
+                        "Invalid assignment target".to_string(),
+                    ));
                 }
-                return Err(InterpreterError::InvalidOperation(
-                    "Invalid assignment target".to_string(),
-                ));
             }
 
             let left_value = eval_expr(left, env)?;
@@ -114,7 +172,7 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                             TokenKind::LogicalOr => Ok(Value::Boolean(bool_l || bool_r)),
                             _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                         }
-                    },
+                    }
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 _ => Err(InterpreterError::TypeMismatch(
