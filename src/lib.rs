@@ -1,9 +1,11 @@
 pub mod lexer;
 pub mod parser;
 pub mod runtime;
+pub mod lsp;
 
 pub use runtime::environment::{BuiltinFunction, Environment, UserFunction, Value};
 pub use runtime::error::InterpreterError;
+pub use lsp::MpLanguageServer;
 
 use rustyline::{
     Completer, Config, Editor, Helper, Highlighter, Hinter, Validator, error::ReadlineError,
@@ -42,6 +44,7 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
         }
         _ => match lexer::tokenize(cmd) {
             Ok(tokens) => {
+                dbg!(&tokens);
                 let ast = match parser::parse(tokens) {
                     Ok(ast) => ast,
                     Err(e) => {
@@ -49,6 +52,7 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
                         return true;
                     }
                 };
+                dbg!(&ast);
                 match runtime::eval::eval_with_env(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),

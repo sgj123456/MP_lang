@@ -61,6 +61,7 @@ pub enum TokenKind {
     Break,
     Continue,
     Return,
+    Unknown,
     Eof,
 }
 
@@ -102,6 +103,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Continue => write!(f, "continue"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::Eof => write!(f, "End of file"),
+            TokenKind::Unknown => write!(f, "Unknown"),
         }
     }
 }

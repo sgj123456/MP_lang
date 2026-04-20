@@ -1,19 +1,26 @@
-use crate::{lexer::TokenKind, runtime::environment::value::Number};
+use crate::lexer::{Span, TokenKind};
+use crate::runtime::environment::value::Number;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+#[derive(Debug, PartialEq, Clone)]
+pub enum ExprKind {
     Number(Number),
     Boolean(bool),
     String(String),
     Variable(String),
     Array(Vec<Expr>),
     Object(Vec<(String, Expr)>),
+    Parenthesized(Box<Expr>),
     If {
         condition: Box<Expr>,
         then_branch: Box<Expr>,
         else_branch: Option<Box<Expr>>,
     },
-    Block(Vec<Stmt>),
+    Block(Vec<StmtKind>),
     BinaryOp {
         left: Box<Expr>,
         op: TokenKind,
@@ -41,8 +48,20 @@ pub enum Expr {
     },
 }
 
+impl Expr {
+    pub fn span(&self) -> Span {
+        self.span
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum Stmt {
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Span,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum StmtKind {
     Expr(Expr),
     Let {
         name: String,
@@ -57,4 +76,10 @@ pub enum Stmt {
     Continue,
     Result(Expr),
     Return(Option<Expr>),
+}
+
+impl Stmt {
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }

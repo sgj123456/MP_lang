@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::{
     lexer::TokenKind,
-    parser::{Expr, Stmt},
+    parser::{Expr, ExprKind, Stmt, StmtKind},
     runtime::{
         environment::{Environment, function::Fun, value::Value},
         error::InterpreterError,
@@ -34,26 +34,26 @@ pub fn eval_stmt(
     stmt: &Stmt,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
-    match stmt {
-        Stmt::Expr(expr) => {
+    match &stmt.kind {
+        StmtKind::Expr(expr) => {
             eval_expr(expr, env)?;
             Ok(Value::Nil)
         }
-        Stmt::Let { name, value } => {
+        StmtKind::Let { name, value } => {
             let value = eval_expr(value, env)?;
             env.borrow_mut().define(name.clone(), value);
             Ok(Value::Nil)
         }
-        Stmt::Function { name, params, body } => {
+        StmtKind::Function { name, params, body } => {
             env.borrow_mut()
                 .define_function(name.clone(), params.clone(), body.clone());
             Ok(Value::Nil)
         }
-        Stmt::Break => Err(InterpreterError::Break),
-        Stmt::Continue => Err(InterpreterError::Continue),
-        Stmt::Result(expr) => eval_expr(expr, env),
-        Stmt::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
-        Stmt::Return(None) => Err(InterpreterError::Return(Value::Nil)),
+        StmtKind::Break => Err(InterpreterError::Break),
+        StmtKind::Continue => Err(InterpreterError::Continue),
+        StmtKind::Result(expr) => eval_expr(expr, env),
+        StmtKind::Return(Some(expr)) => Err(InterpreterError::Return(eval_expr(expr, env)?)),
+        StmtKind::Return(None) => Err(InterpreterError::Return(Value::Nil)),
     }
 }
 
@@ -61,18 +61,19 @@ pub fn eval_expr(
     expr: &Expr,
     env: &Rc<RefCell<Environment>>,
 ) -> Result<Value, InterpreterError> {
-    match expr {
-        Expr::Number(n) => Ok(Value::Number(n.clone())),
-        Expr::Boolean(b) => Ok(Value::Boolean(*b)),
-        Expr::String(s) => Ok(Value::String(s.clone())),
-        Expr::Variable(name) => match env.borrow().get_value(name.as_str()) {
+    match &expr.kind {
+        ExprKind::Number(n) => Ok(Value::Number(n.clone())),
+        ExprKind::Boolean(b) => Ok(Value::Boolean(*b)),
+        ExprKind::String(s) => Ok(Value::String(s.clone())),
+        ExprKind::Parenthesized(expr) => eval_expr(expr, env),
+        ExprKind::Variable(name) => match env.borrow().get_value(name.as_str()) {
             Some(value) => Ok(value),
             None => Err(InterpreterError::UndefinedVariable(name.clone())),
         },
-        Expr::BinaryOp { left, op, right } => {
+        ExprKind::BinaryOp { left, op, right } => {
             if let TokenKind::Assign = op {
-                if let Expr::Variable(name) = left.as_ref() {
-                    let right_value = eval_expr(right, env)?;
+                if let ExprKind::Variable(name) = &left.as_ref().kind {
+                    let right_value = eval_expr(&right, env)?;
                     env.borrow_mut()
                         .assign(name.as_str(), right_value.clone())?;
                     return Ok(right_value);
@@ -82,8 +83,8 @@ pub fn eval_expr(
                 ));
             }
 
-            let left_value = eval_expr(left, env)?;
-            let right_value = eval_expr(right, env)?;
+            let left_value = eval_expr(&left, env)?;
+            let right_value = eval_expr(&right, env)?;
 
             match (left_value, right_value) {
                 (Value::Number(l), Value::Number(r)) => match op {
@@ -109,14 +110,14 @@ pub fn eval_expr(
                 )),
             }
         }
-        Expr::UnaryOp { op, expr } => {
-            let value = eval_expr(expr, env)?;
+        ExprKind::UnaryOp { op, expr } => {
+            let value = eval_expr(&expr, env)?;
             match (op, value) {
                 (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
         }
-        Expr::FunctionCall { name, args } => {
+        ExprKind::FunctionCall { name, args } => {
             let mut args_values = Vec::new();
             for arg in args {
                 args_values.push(eval_expr(arg, env)?);
@@ -127,7 +128,7 @@ pub fn eval_expr(
             };
             fn_value.call(args_values, env)
         }
-        Expr::If {
+        ExprKind::If {
             condition,
             then_branch,
             else_branch,
@@ -147,14 +148,18 @@ pub fn eval_expr(
                 ))
             }
         }
-        Expr::Block(statements) => {
+        ExprKind::Block(statements) => {
             let mut result = Value::Nil;
             for stmt in statements {
-                result = eval_stmt(stmt, env)?;
+                let stmt = Stmt {
+                    kind: stmt.clone(),
+                    span: crate::lexer::Span { line: 0, column: 0 },
+                };
+                result = eval_stmt(&stmt, env)?;
             }
             Ok(result)
         }
-        Expr::While { condition, body } => {
+        ExprKind::While { condition, body } => {
             let mut result = Vec::new();
             loop {
                 let condition_value = eval_expr(condition, env)?;
@@ -181,14 +186,14 @@ pub fn eval_expr(
                 Ok(Value::Array(result))
             }
         }
-        Expr::Array(values) => {
+        ExprKind::Array(values) => {
             let evaluated_values = values
                 .iter()
                 .map(|value| eval_expr(value, env))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(Value::Array(evaluated_values))
         }
-        Expr::Object(vec) => {
+        ExprKind::Object(vec) => {
             let mut object = HashMap::new();
             for (key, value) in vec {
                 let value = eval_expr(value, env)?;
@@ -196,7 +201,7 @@ pub fn eval_expr(
             }
             Ok(Value::Object(object))
         }
-        Expr::Index { object, index } => {
+        ExprKind::Index { object, index } => {
             let obj_value = eval_expr(object, env)?;
             let index_value = eval_expr(index, env)?;
 
@@ -229,12 +234,12 @@ pub fn eval_expr(
                 )),
             }
         }
-        Expr::GetProperty { object, property } => {
+        ExprKind::GetProperty { object, property } => {
             let obj_value = eval_expr(object, env)?;
 
             match obj_value {
                 Value::Object(obj) => {
-                    if let Some(value) = obj.get(property) {
+                    if let Some(value) = obj.get(property.as_str()) {
                         Ok(value.clone())
                     } else {
                         Err(InterpreterError::InvalidOperation(format!(

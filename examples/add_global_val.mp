@@ -1,6 +1,6 @@
-global_a = 10
-fn add_global_val() {
-    global_a = global_a + 10;
+let a = 1
+let a = 1
+let a = 1
+if a == 1 {
+    a = 2
 }
-add_global_val()
-print(global_a)

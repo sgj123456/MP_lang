@@ -1,0 +1,123 @@
+{
+  "name": "mp-lang-lsp",
+  "displayName": "MP Language LSP",
+  "description": "完整的 MP 编程语言语言服务器支持",
+  "version": "0.1.0",
+  "publisher": "mp-lang",
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Snippets"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mp",
+        "aliases": [
+          "MP",
+          "mp",
+          "Mp"
+        ],
+        "extensions": [
+          ".mp"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/mp-icon.png",
+          "dark": "./icons/mp-icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mp",
+        "scopeName": "source.mp",
+        "path": "./syntaxes/mp.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "MP Language Configuration",
+      "properties": {
+        "mp-lang.lsp.server": {
+          "type": "string",
+          "default": "",
+          "description": "MP Language LSP 服务器可执行文件路径（留空则自动使用项目中的构建版本）"
+        },
+        "mp-lang.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "追踪 LSP 服务器通信"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "mp-lang.build-server",
+        "title": "MP Language: 构建 LSP 服务器"
+      },
+      {
+        "command": "mp-lang.restart-server",
+        "title": "MP Language: 重启 LSP 服务器"
+      },
+      {
+        "command": "mp-lang.show-status",
+        "title": "MP Language: 显示服务器状态"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "editorLangId == mp",
+          "command": "mp-lang.restart-server",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^9.0.0",
+    "@types/node": "^25.6.0",
+    "@types/vscode": "^1.116.0",
+    "eslint": "^10.2.1",
+    "glob": "^13.0.6",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/mp-lang.git"
+  },
+  "keywords": [
+    "mp",
+    "language",
+    "lsp",
+    "programming",
+    "中文"
+  ],
+  "author": "MP Language Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-repo/mp-lang/issues"
+  },
+  "homepage": "https://github.com/your-repo/mp-lang#readme",
+  "icon": "icons/mp-icon.png"
+}

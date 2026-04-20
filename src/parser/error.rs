@@ -17,28 +17,33 @@ impl std::fmt::Display for ParserErrorKind {
 
 #[derive(Debug)]
 pub struct ParserError {
-    kind: ParserErrorKind,
-    message: String,
-    span: Option<Span>,
+    pub span: Span,
+    pub kind: ParserErrorKind,
+    pub message: String,
 }
 
 impl std::fmt::Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(span) = self.span {
-            write!(f, "Error at {}: {}: {}", span, self.kind, self.message)
-        } else {
-            write!(f, "{}: {}", self.kind, self.message)
-        }
+        write!(f, "Error at {}: {}: {}", self.span, self.kind, self.message)
     }
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, message: String) -> Self {
-        let span = match &kind {
-            ParserErrorKind::UnexpectedToken(token) => Some(token.span),
-            _ => None,
-        };
-        Self { kind, message, span }
+    pub fn new(span: Span, kind: ParserErrorKind, message: String) -> Self {
+        Self {
+            span,
+            kind,
+            message,
+        }
+    }
+    pub fn span(&self) -> Span {
+        self.span
+    }
+    pub fn kind(&self) -> &ParserErrorKind {
+        &self.kind
+    }
+    pub fn message(&self) -> &str {
+        &self.message
     }
 }
 
