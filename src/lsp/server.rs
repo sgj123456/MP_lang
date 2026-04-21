@@ -5,6 +5,7 @@ use tower_lsp_server::jsonrpc::Result;
 use tower_lsp_server::ls_types::*;
 use tower_lsp_server::{Client, LanguageServer};
 
+use crate::formatter::format_code;
 use crate::lsp::completion::MpCompleter;
 use crate::lsp::definition::MpDefinition;
 use crate::lsp::diagnostics::MpDiagnostics;
@@ -67,6 +68,7 @@ impl LanguageServer for MpLanguageServer {
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
                 workspace_symbol_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             ..Default::default()
@@ -187,5 +189,23 @@ impl LanguageServer for MpLanguageServer {
 
         let hints = self.inlay_hints.provide(content);
         Ok(Some(hints))
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let uri = params.text_document.uri.to_string();
+
+        let docs = self.documents.read().await;
+        let content = docs.get(&uri).map(|s| s.as_str()).unwrap_or("");
+
+        match format_code(content) {
+            Ok(formatted) => {
+                let range = Range {
+                    start: Position::new(0, 0),
+                    end: Position::new(u32::MAX, u32::MAX),
+                };
+                Ok(Some(vec![TextEdit { range, new_text: formatted }]))
+            }
+            Err(_) => Ok(None),
+        }
     }
 }
