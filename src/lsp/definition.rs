@@ -63,12 +63,12 @@ impl MpDefinition {
         target_name: &str,
         uri: &str,
     ) -> Option<GotoDefinitionResponse> {
-        let ast = parse(tokens.to_vec()).ok()?;
+        let ast = parse(tokens.to_vec());
 
         for stmt in &ast {
             if let StmtKind::Function { name, .. } = &stmt.kind
                 && name == target_name
-                    && let Some(token) = self.find_token_by_name(name, tokens) {
+                    && let Some(token) = self.find_token_by_name(&name, tokens) {
                         let location = Location {
                             uri: url::Url::parse(uri).unwrap(),
                             range: Range {
@@ -164,10 +164,9 @@ impl MpDefinition {
         use std::collections::HashMap;
         let mut symbols: HashMap<String, Vec<SymbolInfo>> = HashMap::new();
 
-        if let Ok(ast) = parse(tokens.to_vec()) {
-            for stmt in ast {
-                self.extract_symbols_from_stmt(&stmt, tokens, &mut symbols);
-            }
+        let ast = parse(tokens.to_vec());
+        for stmt in ast {
+            self.extract_symbols_from_stmt(&stmt, tokens, &mut symbols);
         }
 
         symbols

@@ -1,5 +1,5 @@
 use crate::lexer::{Span, tokenize};
-use crate::parser::parse;
+use crate::parser::parse_with_errors;
 use tower_lsp::{Client, lsp_types::*};
 
 #[derive(Debug)]
@@ -40,7 +40,8 @@ impl MpDiagnostics {
             }
         };
 
-        if let Err(e) = parse(tokens.clone()) {
+        let (_, errors) = parse_with_errors(tokens);
+        for e in &errors {
             diagnostics.push(Diagnostic {
                 range: self.span_to_range(&e.span()),
                 severity: Some(DiagnosticSeverity::ERROR),

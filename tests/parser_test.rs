@@ -9,7 +9,7 @@ mod tests {
     #[test]
     fn test_number_expr() {
         let tokens = tokenize("123").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -22,7 +22,7 @@ mod tests {
     #[test]
     fn test_string_expr() {
         let tokens = tokenize("\"hello\"").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -35,7 +35,7 @@ mod tests {
     #[test]
     fn test_boolean_expr() {
         let tokens = tokenize("true").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn test_array_expr() {
         let tokens = tokenize("[1, 2, 3]").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_object_expr() {
         let tokens = tokenize("{\"a\": 1, \"b\": 2}").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_binary_op() {
         let tokens = tokenize("1 + 2").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn test_variable_decl() {
         let tokens = tokenize("let x = 5").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Let { name, .. } => {
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_if_expr() {
         let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn test_operator_precedence() {
         let tokens = tokenize("1 + 2 * 3").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_function_decl() {
         let tokens = tokenize("fn add(a, b) { a + b }").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Function { name, params, .. } => {
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_function_call() {
         let tokens = tokenize("add(1, 2)").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_nested_function_call() {
         let tokens = tokenize("add(1, multiply(2, 3))").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -194,28 +194,28 @@ mod tests {
     #[test]
     fn test_semicolon_separator() {
         let tokens = tokenize("let x = 1; let y = 2").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_multiple_semicolons() {
         let tokens = tokenize("let x = 1;;; let y = 2").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_semicolon_after_expr() {
         let tokens = tokenize("1 + 2; 3 * 4").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_array_index_expression() {
         let tokens = tokenize("arr[0]").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn test_object_property_expression() {
         let tokens = tokenize("obj:name").unwrap();
-        let ast = parse(tokens).unwrap();
+        let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
             StmtKind::Result(expr) => {

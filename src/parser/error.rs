@@ -1,6 +1,6 @@
 use crate::lexer::{Span, Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParserErrorKind {
     UnexpectedToken(Token),
     UnexpectedEOF,
@@ -15,7 +15,7 @@ impl std::fmt::Display for ParserErrorKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParserError {
     pub span: Span,
     pub kind: ParserErrorKind,

@@ -183,19 +183,18 @@ impl MpCompleter {
             std::collections::HashMap::new();
 
         if let Ok(tokens) = tokenize(content) {
-            if let Ok(ast) = parse(tokens.clone()) {
-                for stmt in &ast {
-                    match &stmt.kind {
-                        StmtKind::Let { name, value } => {
-                            let var_type = self.infer_type(value);
-                            variables.insert(name.clone(), var_type);
-                        }
-                        StmtKind::Function { name, params, .. } => {
-                            let params_str = params.join(", ");
-                            variables.insert(name.clone(), format!("fn({})", params_str));
-                        }
-                        _ => {}
+            let ast = parse(tokens.clone());
+            for stmt in &ast {
+                match &stmt.kind {
+                    StmtKind::Let { name, value } => {
+                        let var_type = self.infer_type(value);
+                        variables.insert(name.clone(), var_type);
                     }
+                    StmtKind::Function { name, params, .. } => {
+                        let params_str = params.join(", ");
+                        variables.insert(name.clone(), format!("fn({})", params_str));
+                    }
+                    _ => {}
                 }
             }
 

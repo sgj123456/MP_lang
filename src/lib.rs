@@ -19,7 +19,7 @@ use std::{fs, result::Result};
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(filename)?;
     let tokens = lexer::tokenize(&content)?;
-    let ast = parser::parse(tokens)?;
+    let ast = parser::parse(tokens);
     let result = runtime::eval::eval(ast);
     match result {
         Ok(_) | Err(InterpreterError::Return(_)) => {}
@@ -42,13 +42,7 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
         }
         _ => match lexer::tokenize(cmd) {
             Ok(tokens) => {
-                let ast = match parser::parse(tokens) {
-                    Ok(ast) => ast,
-                    Err(e) => {
-                        eprintln!("Grammar error: {e}");
-                        return true;
-                    }
-                };
+                let ast = parser::parse(tokens);
                 match runtime::eval::eval_with_env(ast, env) {
                     Ok(result) => println!("=> {result:?}"),
                     Err(e) => eprintln!("Execution error: {e}"),

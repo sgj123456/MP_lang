@@ -155,9 +155,8 @@ impl TypeAnalyzer {
     }
 
     pub fn analyze(&mut self, content: &str) {
-        if let Ok(tokens) = tokenize(content)
-            && let Ok(ast) = parse(tokens)
-        {
+        if let Ok(tokens) = tokenize(content) {
+            let ast = parse(tokens);
             for stmt in ast {
                 self.analyze_stmt(&stmt);
             }

@@ -16,6 +16,97 @@ mod tests {
     }
 
     #[test]
+    fn test_diagnostics_valid_code() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = 10\nprint(x)";
+        let result = diagnostics.analyze(content);
+
+        // Valid code should have no diagnostics
+        assert_eq!(result.len(), 0, "Valid code should have no diagnostics");
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_invalid_number() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = 12.34.56";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have lexer error for invalid number");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_unexpected_character() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = @";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have lexer error for unexpected character");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_unclosed_string() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = \"hello";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have lexer error for unclosed string");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_unclosed_comment() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "/* this is a comment";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have lexer error for unclosed comment");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_escape_sequences() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = \"hello\\nworld\"";
+        let result = diagnostics.analyze(content);
+
+        assert_eq!(result.len(), 0, "Valid escape sequences should not produce errors");
+    }
+
+    #[test]
+    fn test_diagnostics_parser_unexpected_token() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = ";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have parser error for unexpected token");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP002".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_lexer_error_stops_parsing() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = @\nlet y = 10";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have lexer error");
+        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+    }
+
+    #[test]
+    fn test_diagnostics_span_position() {
+        let diagnostics = MpDiagnostics::new();
+        let content = "let x = @";
+        let result = diagnostics.analyze(content);
+
+        assert!(result.len() > 0, "Should have diagnostic");
+        let range = &result[0].range;
+        assert!(range.start.line == 0, "Should have valid line at 0");
+        assert!(range.start.character > 0, "Should have character position > 0");
+    }
+
+    #[test]
     fn test_completion_keywords() {
         let completer = MpCompleter::new();
         let content = "l";
