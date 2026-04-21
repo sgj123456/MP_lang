@@ -1,129 +1,259 @@
-# Mp programming language
+# MP Programming Language
 
-## Introduction
+[中文版](./README_zh.md)
 
-Mp is a simple programming language that is designed to be easy to learn and
-use. It is a dynamically-typed language with a focus on simplicity and
-readability.
+## Overview
+
+MP is a simple, dynamically-typed programming language designed for ease of learning and use. It features clean syntax, straightforward semantics, and includes IDE support via LSP.
+
+## Features
+
+- **Dynamic Typing**: No type declarations required
+- **Built-in Types**: Numbers (Int/Float), Strings, Booleans, Arrays, Objects, Functions, Nil
+- **Control Flow**: If/else conditionals, while loops, break/continue
+- **Functions**: User-defined functions with return statements
+- **Block Expressions**: Code blocks with automatic return values
+- **Structs**: User-defined compound types
+- **REPL**: Interactive programming environment
+- **Formatter**: Built-in code formatter
+- **LSP Support**: Full Language Server Protocol implementation for IDE integration
 
 ## Syntax
 
 ### Keywords
 
-| Keyword | Description           |
-| ------- | --------------------- |
-| `if`    | conditional statement |
-| `else`  | conditional statement |
-| `while` | loop statement        |
-| `let`   | variable declaration  |
-| `fn`    | function definition   |
+| Keyword | Description |
+|---------|-------------|
+| `if`    | Conditional statement |
+| `else`  | Alternative branch |
+| `while` | Loop statement |
+| `let`   | Variable declaration |
+| `fn`    | Function definition |
+| `struct`| Structure definition |
+| `break` | Exit loop early |
+| `continue` | Skip to next iteration |
+| `return` | Return value from function |
 
-### Data types
+### Data Types
 
-| Type     | Description                             | Implemented | Example                          |
-| -------- | --------------------------------------- | ----------- | -------------------------------- |
-| Number   | integer or float                        | Yes         | `10`, `3.14`                     |
-| String   | sequence of characters                  | Yes         | `"hello world"`                  |
-| Boolean  | true or false                           | Yes         | `true`, `false`                  |
-| Array    | ordered collection of values            | Yes         | `[1, 2, 3]`                      |
-| Object   | unordered collection of key-value pairs | Yes          | `{ "name": "Alice", "age": 25 }` |
-| Function | user-defined function                   | Yes         | `fn add(a, b) { return a + b; }` |
-| Nil      | empty value                             | Yes         | `nil`                            |
+| Type | Description | Example |
+|------|-------------|---------|
+| Number | Integer or floating-point | `42`, `3.14` |
+| String | Text sequence | `"hello"` |
+| Boolean | True or false | `true`, `false` |
+| Array | Ordered collection | `[1, 2, 3]` |
+| Object | Key-value pairs | `{"key": "value"}` |
+| Function | Callable function | `fn add(a, b) { ... }` |
+| Struct | User-defined type | `struct Person { name, age }` |
+| Nil | Empty value | `nil` |
 
 ### Operators
 
-| Operator | Description              | Implemented |
-| -------- | ------------------------ | ----------- |
-| `+`      | addition                 | Yes         |
-| `-`      | subtraction              | Yes         |
-| `*`      | multiplication           | Yes         |
-| `/`      | division                 | Yes         |
-| `%`      | modulo                   | No          |
-| `==`     | equal                    | Yes         |
-| `!=`     | not equal                | Yes         |
-| `>`      | greater than             | Yes         |
-| `<`      | less than                | Yes         |
-| `>=`     | greater than or equal to | Yes         |
-| `<=`     | less than or equal to    | Yes         |
+| Operator | Description |
+| -------- | ----------- |
+| `+` | Addition / String concatenation |
+| `-` | Subtraction |
+| `*` | Multiplication |
+| `/` | Division |
+| `==` | Equal |
+| `!=` | Not equal |
+| `>` | Greater than |
+| `<` | Less than |
+| `>=` | Greater than or equal |
+| `<=` | Less than or equal |
 
-### Built-in functions
+### Built-in Functions
 
-| Function      | Description                              | Implemented |
-| ------------- | ---------------------------------------- | ----------- |
-| `print(expr)` | print the value of `expr` to the console | Yes         |
-| `input()`     | read a string from the console           | Yes         |
-| `len(str)`    | return the length of `str`               | Yes         |
-| `int(str)`    | convert `str` to an integer              | No          |
-| `float(str)`  | convert `str` to a float                 | No          |
-| `str(num)`    | convert `num` to a string                | No          |
-| `type(expr)`  | return the type of `expr` as a string    | No          |
+| Function | Description |
+| -------- | ----------- |
+| `print(expr)` | Print value to console |
+| `input()` | Read string from console |
+| `int(value)` | Convert to integer |
+| `float(value)` | Convert to float |
+| `str(value)` | Convert to string |
+| `len(collection)` | Get length of string/array/object |
+| `type(expr)` | Get type of expression |
+| `random([min, max])` | Generate random number |
+| `push(array, item)` | Add item to array |
+| `pop(array)` | Remove last item from array |
+| `time()` | Get current timestamp |
 
-### Statements
+## Usage
 
-In Mp, any statement has a value of `nil` and cannot be assigned to a variable.
+### Running MP Programs
 
-| Statement                                                                                         | Description           |
-| ------------------------------------------------------------------------------------------------- | --------------------- |
-| `let a = 10;`                                                                                     | variable declaration  |
-| `fn add(a, b) { return a + b; }`                                                                  | function definition   |
-| `1+1;`                                                                                            | expression statement  |
-| `if (a > 10) { print("a is greater than 10"); } else { print("a is less than or equal to 10"); }` | conditional statement |
-| `while (i < 10) { print(i); i = i + 1; }`                                                         | loop statement        |
+```bash
+# Run a file
+mp filename.mp
 
-- single-line [expressions](#Expressions) are also statements.
-- The last expression in a block expression is automatically wrapped in a
-  `return` statement.
+# Start REPL
+mp
+```
 
-### Expressions
+### REPL Commands
 
-Any expression has a value (which can be `nil`).
-
-| Expression                    | Description      |
-| ----------------------------- | ---------------- |
-| `expr1 + expr2`               | addition         |
-| `expr1 - expr2`               | subtraction      |
-| `expr1 * expr2`               | multiplication   |
-| `expr1 / expr2`               | division         |
-| `expr1 % expr2`               | modulo           |
-| `expr1 == expr2`              | equal            |
-| `expr1 != expr2`              | not equal        |
-| `{expr1; expr2; ...; exprn;}` | block expression |
+| Command | Description |
+|---------|-------------|
+| `exit` | Exit the REPL |
+| `help` | Show available commands |
+| `clear` | Clear the environment |
 
 ## Examples
 
-[examples/example.mp](examples/example.mp)
-
-### Comments
-
+### Hello World
 ```
-// This is a single-line comment
-
-/*
-This is a
-multi-line comment
-*/
+print("Hello, World!");
 ```
 
-### Variable declaration
-
+### Variables
 ```
-let a = 10;
+let name = "Alice";
+let age = 25;
+let score = 98.5;
 ```
 
-### Function definition
-
+### Functions
 ```
 fn add(a, b) {
     return a + b;
 }
+
+let result = add(1, 2);
 ```
 
-### Block expression
-
+### Conditionals
 ```
-{
-    let a = 10;
-    let b = 20;
-    return a + b;
+if (age >= 18) {
+    print("Adult");
+} else {
+    print("Minor");
 }
 ```
+
+### Loops
+```
+let i = 0;
+while (i < 5) {
+    print(i);
+    i = i + 1;
+}
+```
+
+### Break and Continue
+```
+let j = 0;
+while (j < 10) {
+    j = j + 1;
+    if (j == 3) {
+        continue;
+    }
+    if (j == 7) {
+        break;
+    }
+    print(j);
+}
+```
+
+### Arrays
+```
+let arr = [1, 2, 3, 4, 5];
+print(len(arr));
+push(arr, 6);
+let last = pop(arr);
+```
+
+### Objects
+```
+let person = {
+    "name": "Bob",
+    "age": 30
+};
+print(person["name"]);
+```
+
+### Structs
+```
+struct Point {
+    x,
+    y
+}
+
+let p = Point(10, 20);
+print(p.x);
+```
+
+### Type Checking
+```
+let num = 42;
+print(type(num));  // int
+
+let text = "hello";
+print(type(text));  // string
+```
+
+### Type Conversion
+```
+let strNum = "123";
+let num = int(strNum);
+
+let floatNum = float("3.14");
+let strVal = str(42);
+```
+
+### Random Numbers
+```
+let dice = random(1, 7);
+let randomFloat = random(10.0);
+```
+
+### Comments
+
+```
+// Single-line comment
+
+/*
+Multi-line
+comment
+*/
+```
+
+## Project Structure
+
+```
+mp_lang/
+├── src/
+│   ├── lexer/          # Lexical analysis
+│   ├── parser/         # Syntax parsing
+│   ├── runtime/        # Interpreter & evaluator
+│   ├── lsp/            # Language Server Protocol
+│   ├── formatter.rs    # Code formatter
+│   └── lib.rs          # Core library
+├── [examples](./examples)  # Sample MP programs
+├── tests/              # Test suites
+└── vscode-extension/   # VS Code plugin
+```
+
+## Building
+
+```bash
+# Build the project
+cargo build --release
+
+# Run tests
+cargo test
+```
+
+## IDE Support
+
+MP includes full LSP (Language Server Protocol) implementation with:
+
+- **Autocompletion**: Intelligent code suggestions
+- **Hover**: Display type information on hover
+- **Go to Definition**: Navigate to symbol definitions
+- **Find References**: Locate all usages of a symbol
+- **Diagnostics**: Real-time error reporting
+- **Inlay Hints**: Show variable types inline
+- **Workspace Symbols**: Search across files
+- **Code Formatting**: Automatic code styling
+
+Install the VS Code extension from `vscode-extension/` for the best development experience.

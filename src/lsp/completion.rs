@@ -21,7 +21,7 @@ impl MpCompleter {
         Self {
             keywords: vec![
                 "let", "fn", "if", "else", "while", "return", "break", "continue", "true", "false",
-                "nil",
+                "nil", "struct",
             ],
             builtin_functions: vec![
                 "print", "input", "len", "type", "str", "int", "float", "random", "push", "pop",
@@ -152,6 +152,7 @@ impl MpCompleter {
                     "true" => "Boolean true",
                     "false" => "Boolean false",
                     "nil" => "Null value",
+                    "struct" => "Struct definition",
                     _ => "Keyword",
                 };
 
@@ -198,6 +199,13 @@ impl MpCompleter {
                     let params_str = params.join(", ");
                     variables.insert(name.clone(), format!("fn({})", params_str));
                 }
+                StmtKind::Struct { name, fields } => {
+                    let fields_str: Vec<String> = fields
+                        .iter()
+                        .map(|(f, _)| f.clone())
+                        .collect();
+                    variables.insert(name.clone(), format!("struct {{ {} }}", fields_str.join(", ")));
+                }
                 _ => {}
             }
 
@@ -217,6 +225,8 @@ impl MpCompleter {
         for (var, var_type) in variables {
             let kind = if var_type.starts_with("fn(") {
                 Some(CompletionItemKind::FUNCTION)
+            } else if var_type.starts_with("struct {") {
+                Some(CompletionItemKind::CLASS)
             } else {
                 Some(CompletionItemKind::VARIABLE)
             };

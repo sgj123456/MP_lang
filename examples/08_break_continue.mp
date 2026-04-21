@@ -1,4 +1,4 @@
-let i = 0
+let i = 0;
 while i < 10 {
     i = i + 1
     if i == 3 {
@@ -9,10 +9,8 @@ while i < 10 {
     }
     print("i =", i)
 }
-
 print("---")
-
-let j = 0
+let j = 0;
 while j < 5 {
     j = j + 1
     if j == 2 {
@@ -21,9 +19,8 @@ while j < 5 {
     print("j =", j)
 }
 print("Loop ended with j =", j)
-
-let sum = 0
-let k = 1
+let sum = 0;
+let k = 1;
 while k <= 10 {
     if k % 2 == 0 {
         k = k + 1

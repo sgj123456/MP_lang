@@ -99,8 +99,7 @@ enum BuiltinFunction {
     Push,
     Pop,
     Print,
-    Println,
-    ReadLine,
+    Time,
 }
 
 impl BuiltinFunction {
@@ -115,9 +114,8 @@ impl BuiltinFunction {
             "random" => Some((Self::Random, 0..=2)),
             "push" => Some((Self::Push, 2..=2)),
             "pop" => Some((Self::Pop, 1..=1)),
-            "print" => Some((Self::Print, 1..=1)),
-            "println" => Some((Self::Println, 1..=1)),
-            "readline" => Some((Self::ReadLine, 0..=0)),
+            "print" => Some((Self::Print, 1..=usize::MAX)),
+            "time" => Some((Self::Time, 0..=0)),
             _ => None,
         }
     }
@@ -131,6 +129,7 @@ struct VariableInfo {
 struct StaticAnalyzer {
     scopes: Vec<HashMap<String, VariableInfo>>,
     functions: HashMap<String, (Span, Vec<String>)>,
+    structs: HashMap<String, Span>,
 }
 
 impl StaticAnalyzer {
@@ -138,6 +137,7 @@ impl StaticAnalyzer {
         Self {
             scopes: vec![HashMap::new()],
             functions: HashMap::new(),
+            structs: HashMap::new(),
         }
     }
 
@@ -212,12 +212,19 @@ impl StaticAnalyzer {
     }
 
     fn contains_variable(&self, name: &str) -> bool {
+        if self.is_builtin_keyword(name) {
+            return true;
+        }
         for scope in self.scopes.iter().rev() {
             if scope.contains_key(name) {
                 return true;
             }
         }
         false
+    }
+
+    fn is_builtin_keyword(&self, name: &str) -> bool {
+        matches!(name, "true" | "false" | "nil")
     }
 
     fn collect_definitions(&mut self, ast: &[Stmt], diagnostics: &mut Vec<Diagnostic>) {
@@ -341,10 +348,20 @@ impl StaticAnalyzer {
             StmtKind::Return(Some(expr)) => {
                 self.collect_expr_definitions(expr);
             }
-            StmtKind::Break
-            | StmtKind::Continue
-            | StmtKind::Return(None)
-            | StmtKind::Struct { .. } => {}
+            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Struct { name, .. } => {
+                if self.structs.contains_key(name) {
+                    diagnostics.push(Diagnostic {
+                        range: self.span_to_range(&stmt.span),
+                        severity: Some(DiagnosticSeverity::WARNING),
+                        code: Some(NumberOrString::String("MP009".to_string())),
+                        source: Some("mp-lang".to_string()),
+                        message: format!("Struct '{}' is already defined", name),
+                        ..Default::default()
+                    });
+                }
+                self.structs.insert(name.clone(), stmt.span);
+            }
         }
     }
 
@@ -476,7 +493,7 @@ impl StaticAnalyzer {
                             ..Default::default()
                         });
                     }
-                } else if !self.functions.contains_key(name) {
+                } else if !self.functions.contains_key(name) && !self.structs.contains_key(name) {
                     diagnostics.push(Diagnostic {
                         range: self.span_to_range(&expr.span),
                         severity: Some(DiagnosticSeverity::ERROR),
@@ -508,6 +525,21 @@ impl StaticAnalyzer {
                     });
                 }
 
+                for arg in args {
+                    self.check_expr(arg, diagnostics);
+                }
+            }
+            ExprKind::StructInstance { name, args } => {
+                if !self.structs.contains_key(name) {
+                    diagnostics.push(Diagnostic {
+                        range: self.span_to_range(&expr.span),
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        code: Some(NumberOrString::String("MP010".to_string())),
+                        source: Some("mp-lang".to_string()),
+                        message: format!("Undefined struct type: '{}'", name),
+                        ..Default::default()
+                    });
+                }
                 for arg in args {
                     self.check_expr(arg, diagnostics);
                 }
@@ -574,8 +606,7 @@ impl StaticAnalyzer {
             }
             ExprKind::Number(_)
             | ExprKind::Boolean(_)
-            | ExprKind::String(_)
-            | ExprKind::StructInstance { .. } => {}
+            | ExprKind::String(_) => {}
         }
     }
 

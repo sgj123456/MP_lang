@@ -71,6 +71,35 @@ impl MpSymbols {
                 };
                 symbols.push(symbol);
             }
+            StmtKind::Struct { name, fields } => {
+                if name.is_empty() {
+                    return;
+                }
+                let range = self.find_token_range(name, tokens);
+                let detail = fields
+                    .iter()
+                    .map(|(f, d)| {
+                        if d.is_some() {
+                            f.clone()
+                        } else {
+                            f.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                #[allow(deprecated)]
+                let symbol = DocumentSymbol {
+                    name: name.clone(),
+                    detail: Some(format!("struct {{ {} }}", detail)),
+                    kind: SymbolKind::STRUCT,
+                    tags: None,
+                    deprecated: None,
+                    range,
+                    selection_range: range,
+                    children: None,
+                };
+                symbols.push(symbol);
+            }
             _ => {}
         }
     }

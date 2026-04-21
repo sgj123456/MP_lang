@@ -124,7 +124,7 @@ impl Formatter {
             }
             ExprKind::String(s) => {
                 self.output.push('"');
-                self.output.push_str(s);
+                self.output.push_str(&escape_string(s));
                 self.output.push('"');
             }
             ExprKind::Variable(name) => {
@@ -141,7 +141,7 @@ impl Formatter {
                 self.output.push(']');
             }
             ExprKind::Object(properties) => {
-                self.output.push('{');
+                self.output.push_str("{ ");
                 for (i, (key, value)) in properties.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
@@ -151,7 +151,7 @@ impl Formatter {
                     self.output.push_str("\": ");
                     self.format_expr(value);
                 }
-                self.output.push('}');
+                self.output.push_str(" }");
             }
             ExprKind::Parenthesized(expr) => {
                 self.output.push('(');
@@ -254,6 +254,7 @@ fn token_kind_to_string(kind: &TokenKind) -> String {
         TokenKind::Minus => "-".to_string(),
         TokenKind::Multiply => "*".to_string(),
         TokenKind::Divide => "/".to_string(),
+        TokenKind::Modulo => "%".to_string(),
         TokenKind::Assign => "=".to_string(),
         TokenKind::Equal => "==".to_string(),
         TokenKind::NotEqual => "!=".to_string(),
@@ -266,6 +267,21 @@ fn token_kind_to_string(kind: &TokenKind) -> String {
         TokenKind::LessThanOrEqual => "<=".to_string(),
         _ => format!("{:?}", kind),
     }
+}
+
+fn escape_string(s: &str) -> String {
+    let mut result = String::new();
+    for c in s.chars() {
+        match c {
+            '\n' => result.push_str("\\n"),
+            '\t' => result.push_str("\\t"),
+            '\r' => result.push_str("\\r"),
+            '"' => result.push_str("\\\""),
+            '\\' => result.push_str("\\\\"),
+            _ => result.push(c),
+        }
+    }
+    result
 }
 
 pub fn format_code(source: &str) -> Result<String, String> {

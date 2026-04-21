@@ -1,4 +1,5 @@
-use crate::lexer::{TokenKind, tokenize};
+use crate::lexer::{TokenKind, tokenize, tokenize_with_errors};
+use crate::parser::{parse, StmtKind, Expr, ExprKind};
 use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
@@ -24,23 +25,23 @@ impl MpHover {
         for token in &tokens {
             let token_end_col = token.span.column + token.kind.to_string().len();
             if token.span.line == line && token.span.column <= col && token_end_col > col {
-                return self.get_hover_for_token(token);
+                return self.get_hover_for_token(token, content);
             }
         }
 
         for token in tokens.iter().rev() {
             if token.span.line == line && token.span.column <= col {
-                return self.get_hover_for_token(token);
+                return self.get_hover_for_token(token, content);
             }
         }
 
         None
     }
 
-    fn get_hover_for_token(&self, token: &crate::lexer::Token) -> Option<Hover> {
+    fn get_hover_for_token(&self, token: &crate::lexer::Token, content: &str) -> Option<Hover> {
         match &token.kind {
             TokenKind::Identifier(name) => {
-                let (content, _) = self.get_identifier_info(name);
+                let (content, _) = self.get_identifier_info(name, content);
                 Some(Hover {
                     contents: HoverContents::Scalar(MarkedString::String(content)),
                     range: None,
@@ -134,7 +135,15 @@ impl MpHover {
                     range: None,
                 })
             }
-            TokenKind::Plus => {
+            TokenKind::Struct => {
+                Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(
+                        "**struct** - Struct definition keyword\n\nUsed to define a custom data type with named fields.".to_string()
+                    )),
+                    range: None,
+                })
+            }
+            TokenKind::Not => {
                 Some(Hover {
                     contents: HoverContents::Scalar(MarkedString::String(
                         "**+** - Addition operator\n\nAdds two numbers or concatenates two strings.".to_string()
@@ -235,7 +244,7 @@ impl MpHover {
     }
 
     #[allow(dead_code)]
-    fn get_identifier_info(&self, name: &str) -> (String, &'static str) {
+    fn get_identifier_info(&self, name: &str, content: &str) -> (String, &'static str) {
         if self.is_builtin_keyword(name) {
             return (format!("**{}**", name), "keyword");
         }
@@ -244,10 +253,96 @@ impl MpHover {
             return builtin_info;
         }
 
+        let (tokens, _) = tokenize_with_errors(content);
+        let ast = parse(tokens);
+
+        for stmt in &ast {
+            if let StmtKind::Struct { name: struct_name, fields } = &stmt.kind {
+                if struct_name == name {
+                    let fields_str: Vec<String> = fields
+                        .iter()
+                        .map(|(field_name, default_value)| {
+                            if let Some(expr) = default_value {
+                                let type_str = self.infer_expr_type(expr);
+                                format!("{}: {}", field_name, type_str)
+                            } else {
+                                format!("{}", field_name)
+                            }
+                        })
+                        .collect();
+                    return (
+                        format!("**struct {}** {{\n  {}\n}}", name, fields_str.join(",\n  ")),
+                        "struct",
+                    );
+                }
+            }
+
+            if let StmtKind::Function { name: func_name, params, body } = &stmt.kind {
+                if func_name == name {
+                    let return_type = self.infer_expr_type(body);
+                    let params_str = params.join(", ");
+                    return (
+                        format!("**fn {}({}) -> {}**", name, params_str, return_type),
+                        "function",
+                    );
+                }
+            }
+
+            if let StmtKind::Let { name: var_name, value, .. } = &stmt.kind {
+                if var_name == name {
+                    let var_type = self.infer_expr_type(value);
+                    return (format!("**{}**: {}", name, var_type), "variable");
+                }
+            }
+        }
+
         (
             format!("**{}**\n\nIdentifier (variable or function)", name),
             "identifier",
         )
+    }
+
+    fn infer_expr_type(&self, expr: &Expr) -> String {
+        match &expr.kind {
+            ExprKind::Number(n) => match n {
+                crate::runtime::environment::value::Number::Int(_) => "int".to_string(),
+                crate::runtime::environment::value::Number::Float(_) => "float".to_string(),
+            },
+            ExprKind::Boolean(_) => "bool".to_string(),
+            ExprKind::String(_) => "string".to_string(),
+            ExprKind::Array(_) => "array".to_string(),
+            ExprKind::Object(_) => "object".to_string(),
+            ExprKind::FunctionCall { name, .. } => self.get_builtin_return_type(name),
+            ExprKind::Variable(_) => "unknown".to_string(),
+            ExprKind::If { .. } => "unknown".to_string(),
+            ExprKind::While { .. } => "unknown".to_string(),
+            ExprKind::Block(_) => "unknown".to_string(),
+            ExprKind::Index { .. } => "unknown".to_string(),
+            ExprKind::GetProperty { .. } => "unknown".to_string(),
+            ExprKind::UnaryOp { .. } => "unknown".to_string(),
+            ExprKind::BinaryOp { op, .. } => {
+                if matches!(op, TokenKind::Equal | TokenKind::NotEqual | TokenKind::GreaterThan 
+                    | TokenKind::LessThan | TokenKind::GreaterThanOrEqual | TokenKind::LessThanOrEqual) {
+                    "bool".to_string()
+                } else {
+                    "number".to_string()
+                }
+            }
+            ExprKind::Parenthesized(e) => self.infer_expr_type(e),
+            ExprKind::StructInstance { name, .. } => name.clone(),
+        }
+    }
+
+    fn get_builtin_return_type(&self, name: &str) -> String {
+        match name {
+            "print" | "push" | "pop" | "time" => "nil".to_string(),
+            "input" => "string".to_string(),
+            "len" => "int".to_string(),
+            "type" | "str" => "string".to_string(),
+            "int" | "float" => "number".to_string(),
+            "random" => "int".to_string(),
+            _ => "function".to_string(),
+        }
     }
 
     fn is_builtin_keyword(&self, name: &str) -> bool {

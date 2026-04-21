@@ -65,6 +65,40 @@ impl MpDefinition {
         }
 
         self.find_function_call_definition(&tokens, &target_name, uri)
+            .or_else(|| self.find_struct_definition(&tokens, &target_name, uri))
+    }
+
+    fn find_struct_definition(
+        &self,
+        tokens: &[crate::lexer::Token],
+        target_name: &str,
+        uri: &str,
+    ) -> Option<GotoDefinitionResponse> {
+        let ast = parse(tokens.to_vec());
+
+        for stmt in &ast {
+            if let StmtKind::Struct { name, .. } = &stmt.kind
+                && name == target_name
+                && let Some(token) = self.find_token_by_name(name, tokens)
+            {
+                let location = Location {
+                    uri: Uri::from_str(uri).unwrap(),
+                    range: Range {
+                        start: Position {
+                            line: (token.span.line - 1) as u32,
+                            character: (token.span.column - 1) as u32,
+                        },
+                        end: Position {
+                            line: (token.span.line - 1) as u32,
+                            character: (token.span.column + name.len() - 1) as u32,
+                        },
+                    },
+                };
+                return Some(GotoDefinitionResponse::Scalar(location));
+            }
+        }
+
+        None
     }
 
     fn find_function_call_definition(
@@ -223,10 +257,15 @@ impl MpDefinition {
             StmtKind::Return(Some(expr)) => {
                 self.extract_symbols_from_expr(expr, tokens, symbols);
             }
-            StmtKind::Break
-            | StmtKind::Continue
-            | StmtKind::Return(None)
-            | StmtKind::Struct { .. } => {}
+            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Struct { name, .. } => {
+                symbols.entry(name.clone()).or_default().push(SymbolInfo {
+                    _name: name.clone(),
+                    line: stmt.span.line,
+                    column: stmt.span.column,
+                    _kind: SymbolKind::STRUCT,
+                });
+            }
         }
     }
 

@@ -77,6 +77,26 @@ impl MpWorkspaceSymbols {
                 tags: None,
                 deprecated: None,
             }),
+            StmtKind::Struct { name, .. } => Some(SymbolInformation {
+                name: name.clone(),
+                kind: SymbolKind::STRUCT,
+                location: Location {
+                    uri: Uri::from_str(uri).ok()?,
+                    range: Range {
+                        start: Position {
+                            line: (stmt.span.line - 1) as u32,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: (stmt.span.line - 1) as u32,
+                            character: 10,
+                        },
+                    },
+                },
+                container_name: None,
+                tags: None,
+                deprecated: None,
+            }),
             _ => None,
         }
     }
