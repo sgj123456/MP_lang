@@ -38,6 +38,9 @@ impl MpSymbols {
     ) {
         match &stmt.kind {
             StmtKind::Function { name, params, .. } => {
+                if name.is_empty() {
+                    return;
+                }
                 let range = self.find_token_range(name, tokens);
                 #[allow(deprecated)]
                 let symbol = DocumentSymbol {
@@ -53,6 +56,9 @@ impl MpSymbols {
                 symbols.push(symbol);
             }
             StmtKind::Let { name, value } => {
+                if name.is_empty() {
+                    return;
+                }
                 let range = self.find_token_range(name, tokens);
                 let kind = self.infer_variable_kind(value);
                 #[allow(deprecated)]
