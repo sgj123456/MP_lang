@@ -1,6 +1,6 @@
 use mp_lang::lsp::MpLanguageServer;
 use tokio::io::{stdin, stdout};
-use tower_lsp::{LspService, Server};
+use tower_lsp_server::{LspService, Server};
 
 #[tokio::main]
 async fn main() {

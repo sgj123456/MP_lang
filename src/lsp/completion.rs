@@ -1,6 +1,6 @@
 use crate::lexer::{TokenKind, tokenize};
 use crate::parser::{StmtKind, parse};
-use tower_lsp::lsp_types::*;
+use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
 pub struct MpCompleter {

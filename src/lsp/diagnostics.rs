@@ -1,6 +1,7 @@
 use crate::lexer::{Span, tokenize};
 use crate::parser::parse_with_errors;
-use tower_lsp::{Client, lsp_types::*};
+use tower_lsp_server::{Client, ls_types::*};
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct MpDiagnostics;
@@ -18,7 +19,7 @@ impl MpDiagnostics {
 
     pub async fn publish(&self, client: &Client, uri: &str, content: &str) {
         let diagnostics = self.analyze(content);
-        let uri = url::Url::parse(uri).unwrap();
+        let uri = Uri::from_str(uri).unwrap();
         client.publish_diagnostics(uri, diagnostics, None).await;
     }
 

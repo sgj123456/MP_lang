@@ -1,6 +1,7 @@
 use crate::lexer::{TokenKind, tokenize};
 use crate::parser::{Stmt, StmtKind, parse};
-use tower_lsp::lsp_types::*;
+use tower_lsp_server::ls_types::*;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct MpDefinition;
@@ -39,7 +40,7 @@ impl MpDefinition {
             && let Some(first) = symbol_infos.first()
         {
             let location = Location {
-                uri: url::Url::parse(uri).unwrap(),
+                uri: Uri::from_str(uri).unwrap(),
                 range: Range {
                     start: Position {
                         line: (first.line - 1) as u32,
@@ -68,22 +69,23 @@ impl MpDefinition {
         for stmt in &ast {
             if let StmtKind::Function { name, .. } = &stmt.kind
                 && name == target_name
-                    && let Some(token) = self.find_token_by_name(&name, tokens) {
-                        let location = Location {
-                            uri: url::Url::parse(uri).unwrap(),
-                            range: Range {
-                                start: Position {
-                                    line: (token.span.line - 1) as u32,
-                                    character: (token.span.column - 1) as u32,
-                                },
-                                end: Position {
-                                    line: (token.span.line - 1) as u32,
-                                    character: (token.span.column + name.len() - 1) as u32,
-                                },
-                            },
-                        };
-                        return Some(GotoDefinitionResponse::Scalar(location));
-                    }
+                && let Some(token) = self.find_token_by_name(name, tokens)
+            {
+                let location = Location {
+                    uri: Uri::from_str(uri).unwrap(),
+                    range: Range {
+                        start: Position {
+                            line: (token.span.line - 1) as u32,
+                            character: (token.span.column - 1) as u32,
+                        },
+                        end: Position {
+                            line: (token.span.line - 1) as u32,
+                            character: (token.span.column + name.len() - 1) as u32,
+                        },
+                    },
+                };
+                return Some(GotoDefinitionResponse::Scalar(location));
+            }
         }
 
         None
@@ -107,14 +109,13 @@ impl MpDefinition {
         }
 
         let mut locations = Vec::new();
-        let uri = url::Url::parse(uri).ok()?;
 
         for token in &tokens {
             if let TokenKind::Identifier(name) = &token.kind
                 && name == &target_name
             {
                 locations.push(Location {
-                    uri: uri.clone(),
+                    uri: Uri::from_str(uri).unwrap(),
                     range: Range {
                         start: Position {
                             line: (token.span.line - 1) as u32,

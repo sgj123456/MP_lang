@@ -1,7 +1,7 @@
 use crate::lexer::TokenKind;
 use crate::lexer::tokenize;
 use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse};
-use tower_lsp::lsp_types::*;
+use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
 pub struct MpSymbols;

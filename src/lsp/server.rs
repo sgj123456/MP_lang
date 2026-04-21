@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer};
+use tower_lsp_server::jsonrpc::Result;
+use tower_lsp_server::ls_types::*;
+use tower_lsp_server::{Client, LanguageServer};
 
 use crate::lsp::completion::MpCompleter;
 use crate::lsp::definition::MpDefinition;
 use crate::lsp::diagnostics::MpDiagnostics;
 use crate::lsp::hover::MpHover;
+use crate::lsp::inlay_hint::MpInlayHints;
 use crate::lsp::symbols::MpSymbols;
 use crate::lsp::workspace_symbols::MpWorkspaceSymbols;
 
@@ -20,6 +21,7 @@ pub struct MpLanguageServer {
     completer: MpCompleter,
     diagnostics: MpDiagnostics,
     hover: MpHover,
+    inlay_hints: MpInlayHints,
     symbols: MpSymbols,
     definition: MpDefinition,
     #[allow(dead_code)]
@@ -34,6 +36,7 @@ impl MpLanguageServer {
             completer: MpCompleter::new(),
             diagnostics: MpDiagnostics::new(),
             hover: MpHover::new(),
+            inlay_hints: MpInlayHints::new(),
             symbols: MpSymbols::new(),
             definition: MpDefinition::new(),
             workspace_symbols: MpWorkspaceSymbols::new(),
@@ -41,7 +44,6 @@ impl MpLanguageServer {
     }
 }
 
-#[tower_lsp::async_trait]
 impl LanguageServer for MpLanguageServer {
     async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
@@ -59,6 +61,7 @@ impl LanguageServer for MpLanguageServer {
                     ]),
                     ..Default::default()
                 }),
+                inlay_hint_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 definition_provider: Some(OneOf::Left(true)),
@@ -174,5 +177,15 @@ impl LanguageServer for MpLanguageServer {
         let content = docs.get(&uri).map(|s| s.as_str()).unwrap_or("");
 
         Ok(self.definition.references(content, position, &uri))
+    }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        let uri = params.text_document.uri.to_string();
+
+        let docs = self.documents.read().await;
+        let content = docs.get(&uri).map(|s| s.as_str()).unwrap_or("");
+
+        let hints = self.inlay_hints.provide(content);
+        Ok(Some(hints))
     }
 }

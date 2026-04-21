@@ -3,7 +3,7 @@ mod tests {
     use mp_lang::lsp::completion::MpCompleter;
     use mp_lang::lsp::diagnostics::MpDiagnostics;
     use mp_lang::lsp::hover::MpHover;
-    use tower_lsp::lsp_types::Position;
+    use tower_lsp_server::ls_types::Position;
 
     #[test]
     fn test_diagnostics_empty_file() {
@@ -31,8 +31,16 @@ mod tests {
         let content = "let x = 12.34.56";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have lexer error for invalid number");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+        assert!(
+            result.len() > 0,
+            "Should have lexer error for invalid number"
+        );
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP001".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -41,8 +49,16 @@ mod tests {
         let content = "let x = @";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have lexer error for unexpected character");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+        assert!(
+            result.len() > 0,
+            "Should have lexer error for unexpected character"
+        );
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP001".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -51,8 +67,16 @@ mod tests {
         let content = "let x = \"hello";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have lexer error for unclosed string");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+        assert!(
+            result.len() > 0,
+            "Should have lexer error for unclosed string"
+        );
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP001".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -61,8 +85,16 @@ mod tests {
         let content = "/* this is a comment";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have lexer error for unclosed comment");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+        assert!(
+            result.len() > 0,
+            "Should have lexer error for unclosed comment"
+        );
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP001".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -71,7 +103,11 @@ mod tests {
         let content = "let x = \"hello\\nworld\"";
         let result = diagnostics.analyze(content);
 
-        assert_eq!(result.len(), 0, "Valid escape sequences should not produce errors");
+        assert_eq!(
+            result.len(),
+            0,
+            "Valid escape sequences should not produce errors"
+        );
     }
 
     #[test]
@@ -80,8 +116,16 @@ mod tests {
         let content = "let x = ";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have parser error for unexpected token");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP002".to_string())));
+        assert!(
+            result.len() > 0,
+            "Should have parser error for unexpected token"
+        );
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP002".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -91,7 +135,12 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert!(result.len() > 0, "Should have lexer error");
-        assert_eq!(result[0].code, Some(tower_lsp::lsp_types::NumberOrString::String("MP001".to_string())));
+        assert_eq!(
+            result[0].code,
+            Some(tower_lsp_server::ls_types::NumberOrString::String(
+                "MP001".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -103,7 +152,10 @@ mod tests {
         assert!(result.len() > 0, "Should have diagnostic");
         let range = &result[0].range;
         assert!(range.start.line == 0, "Should have valid line at 0");
-        assert!(range.start.character > 0, "Should have character position > 0");
+        assert!(
+            range.start.character > 0,
+            "Should have character position > 0"
+        );
     }
 
     #[test]

@@ -1,6 +1,7 @@
 use crate::lexer::tokenize;
 use crate::parser::{Stmt, StmtKind, parse};
-use tower_lsp::lsp_types::*;
+use tower_lsp_server::ls_types::*;
+use std::str::FromStr;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -43,7 +44,7 @@ impl MpWorkspaceSymbols {
                 name: name.clone(),
                 kind: SymbolKind::FUNCTION,
                 location: Location {
-                    uri: url::Url::parse(uri).ok()?,
+                    uri: Uri::from_str(uri).ok()?,
                     range: Range {
                         start: Position {
                             line: (stmt.span.line - 1) as u32,
@@ -63,7 +64,7 @@ impl MpWorkspaceSymbols {
                 name: name.clone(),
                 kind: SymbolKind::VARIABLE,
                 location: Location {
-                    uri: url::Url::parse(uri).ok()?,
+                    uri: Uri::from_str(uri).ok()?,
                     range: Range {
                         start: Position {
                             line: (stmt.span.line - 1) as u32,
