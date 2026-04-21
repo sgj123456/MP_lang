@@ -24,7 +24,11 @@ pub struct ParserError {
 
 impl std::fmt::Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error at {}: {}: {}", self.span, self.kind, self.message)
+        if self.message.is_empty() {
+            write!(f, "Error at {}: {}", self.span, self.kind)
+        } else {
+            write!(f, "Error at {}: {}", self.span, self.message)
+        }
     }
 }
 
