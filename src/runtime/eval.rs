@@ -46,6 +46,19 @@ pub fn eval_stmt(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                 .define_function(name.clone(), params.clone(), body.clone())?;
             Ok(Value::Nil)
         }
+        StmtKind::Struct { name, fields } => {
+            let mut evaluated_fields = Vec::new();
+            for (field_name, default_value) in fields {
+                let value = match default_value {
+                    Some(expr) => Some(eval_expr(expr, env)?),
+                    None => None,
+                };
+                evaluated_fields.push((field_name.clone(), value));
+            }
+            env.borrow_mut()
+                .define_struct(name.clone(), evaluated_fields)?;
+            Ok(Value::Nil)
+        }
         StmtKind::Break => Err(InterpreterError::Break),
         StmtKind::Continue => Err(InterpreterError::Continue),
         StmtKind::Result(expr) => eval_expr(expr, env),
@@ -144,6 +157,7 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                     TokenKind::Minus => Ok(Value::Number(l - r)),
                     TokenKind::Multiply => Ok(Value::Number(l * r)),
                     TokenKind::Divide => Ok(Value::Number(l / r)),
+                    TokenKind::Modulo => Ok(Value::Number(l % r)),
                     TokenKind::GreaterThan => Ok(Value::Boolean(l > r)),
                     TokenKind::GreaterThanOrEqual => Ok(Value::Boolean(l >= r)),
                     TokenKind::LessThan => Ok(Value::Boolean(l < r)),
@@ -162,6 +176,7 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                     _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
                 },
                 (Value::String(l), Value::String(r)) => match op {
+                    TokenKind::Plus => Ok(Value::String(l + &r)),
                     TokenKind::Equal => Ok(Value::Boolean(l == r)),
                     TokenKind::NotEqual => Ok(Value::Boolean(l != r)),
                     TokenKind::LogicalAnd | TokenKind::LogicalOr => {
@@ -184,13 +199,57 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
             let value = eval_expr(expr, env)?;
             match (op, value) {
                 (TokenKind::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
+                (TokenKind::Not, Value::Boolean(b)) => Ok(Value::Boolean(!b)),
+                (TokenKind::Not, Value::Nil) => Ok(Value::Boolean(true)),
                 _ => Err(InterpreterError::InvalidOperation(format!("{op:?}"))),
             }
+        }
+        ExprKind::StructInstance { name, args } => {
+            let mut args_values = Vec::new();
+            for arg in args {
+                args_values.push(eval_expr(arg, env)?);
+            }
+            let struct_def = match env.borrow().get_struct(name.as_str()) {
+                Some(def) => def,
+                None => return Err(InterpreterError::UndefinedVariable(name.clone())),
+            };
+            let mut fields = HashMap::new();
+            for (i, (field_name, default_value)) in struct_def.fields.iter().enumerate() {
+                let value = if i < args_values.len() {
+                    args_values[i].clone()
+                } else if let Some(default) = default_value {
+                    default.clone()
+                } else {
+                    Value::Nil
+                };
+                fields.insert(field_name.clone(), value);
+            }
+            Ok(Value::StructInstance {
+                name: name.clone(),
+                fields,
+            })
         }
         ExprKind::FunctionCall { name, args } => {
             let mut args_values = Vec::new();
             for arg in args {
                 args_values.push(eval_expr(arg, env)?);
+            }
+            if let Some(struct_def) = env.borrow().get_struct(name.as_str()) {
+                let mut fields = HashMap::new();
+                for (i, (field_name, default_value)) in struct_def.fields.iter().enumerate() {
+                    let value = if i < args_values.len() {
+                        args_values[i].clone()
+                    } else if let Some(default) = default_value {
+                        default.clone()
+                    } else {
+                        Value::Nil
+                    };
+                    fields.insert(field_name.clone(), value);
+                }
+                return Ok(Value::StructInstance {
+                    name: name.clone(),
+                    fields,
+                });
             }
             let fn_value = match env.borrow().get_function_recursive(name.as_str()) {
                 Some(value) => value,
@@ -314,6 +373,16 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                         )))
                     }
                 }
+                (Value::StructInstance { fields, .. }, Value::String(key)) => {
+                    if let Some(value) = fields.get(&key) {
+                        Ok(value.clone())
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "Struct property not found: {}",
+                            key
+                        )))
+                    }
+                }
                 _ => Err(InterpreterError::TypeMismatch(
                     "Index access requires array/string index or object/string property"
                         .to_string(),
@@ -330,6 +399,16 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
                     } else {
                         Err(InterpreterError::InvalidOperation(format!(
                             "Object property not found: {}",
+                            property
+                        )))
+                    }
+                }
+                Value::StructInstance { fields, .. } => {
+                    if let Some(value) = fields.get(property.as_str()) {
+                        Ok(value.clone())
+                    } else {
+                        Err(InterpreterError::InvalidOperation(format!(
+                            "Struct property not found: {}",
                             property
                         )))
                     }

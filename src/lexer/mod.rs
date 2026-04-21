@@ -287,6 +287,7 @@ impl<'a> Cursor<'a> {
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             "return" => TokenKind::Return,
+            "struct" => TokenKind::Struct,
             _ => TokenKind::Identifier(ident),
         };
 
@@ -312,6 +313,7 @@ impl<'a> Cursor<'a> {
             '-' => TokenKind::Minus,
             '*' => TokenKind::Multiply,
             '/' => TokenKind::Divide,
+            '%' => TokenKind::Modulo,
             '&' => {
                 if self.peek_n(1) == Some('&') {
                     self.bump();

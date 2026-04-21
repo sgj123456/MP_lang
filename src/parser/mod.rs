@@ -65,6 +65,8 @@ impl Parser {
             self.let_statement()
         } else if self.match_token(&TokenKind::Fn) {
             self.function_statement()
+        } else if self.match_token(&TokenKind::Struct) {
+            self.struct_statement()
         } else if self.match_token(&TokenKind::Continue) {
             Stmt {
                 kind: StmtKind::Continue,
@@ -297,7 +299,10 @@ impl Parser {
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
 
-        while self.match_token(&TokenKind::Multiply) || self.match_token(&TokenKind::Divide) {
+        while self.match_token(&TokenKind::Multiply)
+            || self.match_token(&TokenKind::Divide)
+            || self.match_token(&TokenKind::Modulo)
+        {
             let op = self.previous().to_owned().kind;
             let right = self.unary();
             expr = Expr {
@@ -314,19 +319,18 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Expr {
-        if self.match_token(&TokenKind::Minus) {
+        if self.match_token(&TokenKind::Minus) || self.match_token(&TokenKind::Not) {
             let op = self.previous().to_owned().kind;
             let expr = self.unary();
-            Expr {
+            return Expr {
                 kind: ExprKind::UnaryOp {
                     op,
                     expr: Box::new(expr),
                 },
                 span: self.previous().span,
-            }
-        } else {
-            self.primary()
+            };
         }
+        self.primary()
     }
 
     fn primary(&mut self) -> Expr {
@@ -459,12 +463,15 @@ impl Parser {
             }
             TokenKind::LeftBracket => {
                 self.advance();
+                self.delete_empty_lines();
                 let mut elements = Vec::new();
                 while !self.check(&TokenKind::RightBracket) && !self.is_at_end() {
                     elements.push(self.expression());
+                    self.delete_empty_lines();
                     if !self.match_token(&TokenKind::Comma) {
                         break;
                     }
+                    self.delete_empty_lines();
                 }
                 self.consume(&TokenKind::RightBracket, "Expect ']' after array elements");
                 Expr {
@@ -625,6 +632,38 @@ impl Parser {
 
         Stmt {
             kind: StmtKind::Function { name, params, body },
+            span: self.previous().span,
+        }
+    }
+
+    fn struct_statement(&mut self) -> Stmt {
+        let name = self.consume_identifier();
+        self.consume(&TokenKind::LeftBrace, "Expect '{' after struct name");
+
+        let mut fields = Vec::new();
+        while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
+            self.delete_empty_lines();
+            let field_name = self.consume_identifier();
+            self.delete_empty_lines();
+            let default_value = if self.match_token(&TokenKind::Assign) {
+                let expr = Some(self.expression());
+                self.delete_empty_lines();
+                expr
+            } else {
+                None
+            };
+            fields.push((field_name, default_value));
+
+            if !self.match_token(&TokenKind::Comma) {
+                break;
+            }
+            self.delete_empty_lines();
+        }
+
+        self.consume(&TokenKind::RightBrace, "Expect '}' after struct fields");
+
+        Stmt {
+            kind: StmtKind::Struct { name, fields },
             span: self.previous().span,
         }
     }

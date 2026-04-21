@@ -1,5 +1,4 @@
-use crate::lexer::{TokenKind, tokenize};
-use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse};
+use crate::parser::{Expr, ExprKind, Stmt, StmtKind};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -10,12 +9,10 @@ pub enum TypeInfo {
     Boolean,
     Array(Box<TypeInfo>),
     Object(HashMap<String, TypeInfo>),
-    Function {
-        params: Vec<String>,
-        return_type: Box<TypeInfo>,
-    },
-    Unknown,
+    Function,
     Nil,
+    Unknown,
+    Custom(String),
 }
 
 impl fmt::Display for TypeInfo {
@@ -32,49 +29,34 @@ impl fmt::Display for TypeInfo {
                     .collect();
                 write!(f, "Object {{ {} }}", fields_str.join(", "))
             }
-            TypeInfo::Function {
-                params,
-                return_type,
-            } => {
-                let params_str = params.join(", ");
-                write!(f, "fn({}) -> {}", params_str, return_type)
-            }
-            TypeInfo::Unknown => write!(f, "Unknown"),
+            TypeInfo::Function => write!(f, "Function"),
             TypeInfo::Nil => write!(f, "Nil"),
+            TypeInfo::Unknown => write!(f, "Unknown"),
+            TypeInfo::Custom(name) => write!(f, "{}", name),
         }
     }
 }
+
 impl TypeInfo {
     pub fn from_expr(expr: &Expr) -> Self {
         match &expr.kind {
             ExprKind::Number(_) => TypeInfo::Number,
             ExprKind::Boolean(_) => TypeInfo::Boolean,
             ExprKind::String(_) => TypeInfo::String,
-            ExprKind::Array(items) => {
-                if let Some(first) = items.first() {
-                    TypeInfo::Array(Box::new(TypeInfo::from_expr(first)))
-                } else {
-                    TypeInfo::Array(Box::new(TypeInfo::Unknown))
-                }
-            }
+            ExprKind::Array(_) => TypeInfo::Array(Box::new(TypeInfo::Unknown)),
             ExprKind::Object(fields) => {
                 let mut type_fields = HashMap::new();
-                for (name, value) in fields {
-                    type_fields.insert(name.clone(), TypeInfo::from_expr(value));
+                for (key, value) in fields {
+                    type_fields.insert(key.clone(), Self::from_expr(value));
                 }
                 TypeInfo::Object(type_fields)
             }
-            ExprKind::FunctionCall { name, args } => {
-                if crate::lsp::definition::MpDefinition::new().is_builtin(name) {
-                    return Self::builtin_function_return_type(name, args);
-                }
-                TypeInfo::Unknown
-            }
             ExprKind::Variable(_) => TypeInfo::Unknown,
+            ExprKind::Parenthesized(expr) => Self::from_expr(expr),
             ExprKind::If {
+                condition: _,
                 then_branch,
                 else_branch,
-                ..
             } => {
                 let then_type = Self::from_expr(then_branch);
                 if let Some(else_b) = else_branch {
@@ -85,65 +67,39 @@ impl TypeInfo {
                         TypeInfo::Unknown
                     }
                 } else {
-                    then_type
+                    TypeInfo::Nil
                 }
             }
-            ExprKind::BinaryOp { left, op, right } => match op {
-                TokenKind::Plus => {
-                    let l = Self::from_expr(left);
-                    let r = Self::from_expr(right);
-                    if matches!(l, TypeInfo::String) || matches!(r, TypeInfo::String) {
-                        TypeInfo::String
-                    } else {
-                        TypeInfo::Number
-                    }
+            ExprKind::BinaryOp { left, right, .. } => {
+                let left_type = Self::from_expr(left);
+                let right_type = Self::from_expr(right);
+                if left_type == right_type {
+                    left_type
+                } else {
+                    TypeInfo::Unknown
                 }
-                TokenKind::Minus
-                | TokenKind::Multiply
-                | TokenKind::Divide
-                | TokenKind::GreaterThan
-                | TokenKind::LessThan
-                | TokenKind::GreaterThanOrEqual
-                | TokenKind::LessThanOrEqual => TypeInfo::Number,
-                TokenKind::Equal | TokenKind::NotEqual => TypeInfo::Boolean,
-                _ => TypeInfo::Unknown,
-            },
-            ExprKind::Index { .. } => TypeInfo::Unknown,
-            ExprKind::GetProperty { .. } => TypeInfo::Unknown,
-            ExprKind::While { .. } => TypeInfo::Nil,
-            ExprKind::Parenthesized(expr) => Self::from_expr(expr),
-            ExprKind::Block(_) => TypeInfo::Unknown,
+            }
             ExprKind::UnaryOp { expr, .. } => Self::from_expr(expr),
-        }
-    }
-
-    fn builtin_function_return_type(name: &str, args: &[Expr]) -> Self {
-        match name {
-            "len" => TypeInfo::Number,
-            "type" => TypeInfo::String,
-            "str" => TypeInfo::String,
-            "int" => TypeInfo::Number,
-            "float" => TypeInfo::Number,
-            "input" => TypeInfo::String,
-            "random" => TypeInfo::Number,
-            "push" | "pop" => {
-                if let Some(ExprKind::Array(items)) = args.first().map(|e| &e.kind)
-                    && let Some(first) = items.first()
-                {
-                    return TypeInfo::from_expr(first);
-                }
-                TypeInfo::Unknown
-            }
-            "print" => TypeInfo::Nil,
-            _ => TypeInfo::Unknown,
+            ExprKind::FunctionCall { .. } => TypeInfo::Function,
+            ExprKind::While { .. } => TypeInfo::Nil,
+            ExprKind::GetProperty { .. } => TypeInfo::Unknown,
+            ExprKind::Index { .. } => TypeInfo::Unknown,
+            ExprKind::Block(_) => TypeInfo::Unknown,
+            ExprKind::StructInstance { name, .. } => TypeInfo::Custom(name.clone()),
         }
     }
 }
 
-#[derive(Debug)]
 pub struct TypeAnalyzer {
-    variables: HashMap<String, TypeInfo>,
-    functions: HashMap<String, (Vec<String>, TypeInfo)>,
+    pub variables: HashMap<String, TypeInfo>,
+    pub functions: HashMap<String, (Vec<String>, TypeInfo)>,
+    pub structs: HashMap<String, Vec<(String, TypeInfo)>>,
+}
+
+impl Default for TypeAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeAnalyzer {
@@ -151,15 +107,13 @@ impl TypeAnalyzer {
         Self {
             variables: HashMap::new(),
             functions: HashMap::new(),
+            structs: HashMap::new(),
         }
     }
 
-    pub fn analyze(&mut self, content: &str) {
-        if let Ok(tokens) = tokenize(content) {
-            let ast = parse(tokens);
-            for stmt in ast {
-                self.analyze_stmt(&stmt);
-            }
+    pub fn analyze(&mut self, ast: Vec<Stmt>) {
+        for stmt in ast {
+            self.analyze_stmt(&stmt);
         }
     }
 
@@ -174,6 +128,17 @@ impl TypeAnalyzer {
                 self.functions
                     .insert(name.clone(), (params.clone(), return_type));
             }
+            StmtKind::Struct { name, fields } => {
+                let mut type_fields = Vec::new();
+                for (field_name, default_value) in fields {
+                    let field_type = match default_value {
+                        Some(expr) => TypeInfo::from_expr(expr),
+                        None => TypeInfo::Unknown,
+                    };
+                    type_fields.push((field_name.clone(), field_type));
+                }
+                self.structs.insert(name.clone(), type_fields);
+            }
             StmtKind::Expr(expr) => {
                 self.analyze_expr(expr);
             }
@@ -181,35 +146,69 @@ impl TypeAnalyzer {
         }
     }
 
-    fn analyze_expr(&mut self, expr: &Expr) -> TypeInfo {
-        TypeInfo::from_expr(expr)
-    }
-
-    pub fn get_variable_type(&self, name: &str) -> TypeInfo {
-        self.variables.get(name).cloned().unwrap_or(TypeInfo::Nil)
-    }
-
-    pub fn get_function_info(&self, name: &str) -> Option<(Vec<String>, TypeInfo)> {
-        self.functions.get(name).cloned()
-    }
-
-    pub fn get_all_variables(&self) -> Vec<(String, TypeInfo)> {
-        self.variables
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect()
-    }
-
-    pub fn get_all_functions(&self) -> Vec<(String, Vec<String>, TypeInfo)> {
-        self.functions
-            .iter()
-            .map(|(k, (params, ret))| (k.clone(), params.clone(), ret.clone()))
-            .collect()
-    }
-}
-
-impl Default for TypeAnalyzer {
-    fn default() -> Self {
-        Self::new()
+    fn analyze_expr(&mut self, expr: &Expr) {
+        match &expr.kind {
+            ExprKind::Variable(name) => {
+                if let Some(var_type) = self.variables.get(name) {
+                    let _ = var_type;
+                }
+            }
+            ExprKind::FunctionCall { name, args } => {
+                for arg in args {
+                    self.analyze_expr(arg);
+                }
+                if let Some((params, return_type)) = self.functions.get(name) {
+                    let _ = (params, return_type);
+                }
+            }
+            ExprKind::BinaryOp { left, right, .. } => {
+                self.analyze_expr(left);
+                self.analyze_expr(right);
+            }
+            ExprKind::UnaryOp { expr, .. } => {
+                self.analyze_expr(expr);
+            }
+            ExprKind::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.analyze_expr(condition);
+                self.analyze_expr(then_branch);
+                if let Some(else_b) = else_branch {
+                    self.analyze_expr(else_b);
+                }
+            }
+            ExprKind::While { condition, body } => {
+                self.analyze_expr(condition);
+                self.analyze_expr(body);
+            }
+            ExprKind::Array(elements) => {
+                for element in elements {
+                    self.analyze_expr(element);
+                }
+            }
+            ExprKind::Object(fields) => {
+                for (_, value) in fields {
+                    self.analyze_expr(value);
+                }
+            }
+            ExprKind::Index { object, index } => {
+                self.analyze_expr(object);
+                self.analyze_expr(index);
+            }
+            ExprKind::GetProperty { object, .. } => {
+                self.analyze_expr(object);
+            }
+            ExprKind::StructInstance { name, args } => {
+                for arg in args {
+                    self.analyze_expr(arg);
+                }
+                if let Some(struct_fields) = self.structs.get(name) {
+                    let _ = struct_fields;
+                }
+            }
+            _ => {}
+        }
     }
 }

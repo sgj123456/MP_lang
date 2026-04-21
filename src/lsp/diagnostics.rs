@@ -261,6 +261,7 @@ impl StaticAnalyzer {
             Index { .. } => "unknown".to_string(),
             GetProperty { .. } => "unknown".to_string(),
             UnaryOp { .. } => "unknown".to_string(),
+            StructInstance { .. } => "unknown".to_string(),
         }
     }
 
@@ -332,7 +333,10 @@ impl StaticAnalyzer {
             StmtKind::Return(Some(expr)) => {
                 self.collect_expr_definitions(expr);
             }
-            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Break
+            | StmtKind::Continue
+            | StmtKind::Return(None)
+            | StmtKind::Struct { .. } => {}
         }
     }
 
@@ -413,7 +417,10 @@ impl StaticAnalyzer {
             StmtKind::Return(Some(expr)) => {
                 self.check_expr(expr, diagnostics);
             }
-            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Break
+            | StmtKind::Continue
+            | StmtKind::Return(None)
+            | StmtKind::Struct { .. } => {}
         }
     }
 
@@ -557,7 +564,10 @@ impl StaticAnalyzer {
             ExprKind::Parenthesized(expr) => {
                 self.check_expr(expr, diagnostics);
             }
-            ExprKind::Number(_) | ExprKind::Boolean(_) | ExprKind::String(_) => {}
+            ExprKind::Number(_)
+            | ExprKind::Boolean(_)
+            | ExprKind::String(_)
+            | ExprKind::StructInstance { .. } => {}
         }
     }
 

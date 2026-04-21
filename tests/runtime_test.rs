@@ -201,4 +201,42 @@ mod tests {
         let result = eval(ast).unwrap();
         assert_eq!(result, Value::String("42".to_string()));
     }
+
+    #[test]
+    fn test_examples() {
+        use std::fs;
+        use std::path::Path;
+
+        let examples_dir = Path::new("examples");
+        let mut example_files: Vec<_> = fs::read_dir(examples_dir)
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                let path = entry.path();
+                path.extension().map_or(false, |ext| ext == "mp")
+            })
+            .collect();
+
+        example_files.sort_by_key(|entry| entry.path());
+
+        for entry in example_files {
+            let path = entry.path();
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+            println!("Testing: {}", file_name);
+
+            let content = fs::read_to_string(&path).unwrap();
+            let tokens = tokenize(&content).unwrap();
+            let ast = parse(tokens);
+            let result = eval(ast);
+
+            match result {
+                Ok(_) | Err(mp_lang::InterpreterError::Return(_)) => {
+                    println!("  ✓ {} passed", file_name);
+                }
+                Err(e) => {
+                    panic!("  ✗ {} failed: {:?}", file_name, e);
+                }
+            }
+        }
+    }
 }

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::{
     parser::Expr,
-    runtime::environment::{function::Function, value::EnvironmentValue},
+    runtime::environment::{function::Function, value::EnvironmentValue, value::StructDef},
     runtime::error::InterpreterError,
 };
 
@@ -120,6 +120,31 @@ impl Environment {
             EnvironmentValue::Function(Function::User(UserFunction { params, body })),
         );
         Ok(())
+    }
+
+    pub fn define_struct(
+        &mut self,
+        name: String,
+        fields: Vec<(String, Option<Value>)>,
+    ) -> Result<(), InterpreterError> {
+        if self.locals.contains_key(&name) {
+            return Err(InterpreterError::RedefinedVariable(name));
+        }
+        self.locals.insert(
+            name.clone(),
+            EnvironmentValue::Struct(StructDef { name, fields }),
+        );
+        Ok(())
+    }
+
+    pub fn get_struct(&self, name: &str) -> Option<StructDef> {
+        match self.locals.get(name) {
+            Some(EnvironmentValue::Struct(def)) => Some(def.clone()),
+            _ => self
+                .parent
+                .as_ref()
+                .and_then(|parent| parent.borrow().get_struct(name)),
+        }
     }
 
     pub fn get_value(&self, name: &str) -> Option<Value> {

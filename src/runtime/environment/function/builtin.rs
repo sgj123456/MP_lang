@@ -124,6 +124,7 @@ fn type_of(args: Vec<Value>) -> Result<Value, InterpreterError> {
         Some(Value::String(_)) => Ok(Value::String("string".to_string())),
         Some(Value::Array(_)) => Ok(Value::String("array".to_string())),
         Some(Value::Object(_)) => Ok(Value::String("object".to_string())),
+        Some(Value::StructInstance { name, .. }) => Ok(Value::String(name.clone())),
         Some(Value::Nil) => Ok(Value::String("nil".to_string())),
         None => Ok(Value::String("nil".to_string())),
     }

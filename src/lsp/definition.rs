@@ -215,7 +215,10 @@ impl MpDefinition {
             StmtKind::Return(Some(expr)) => {
                 self.extract_symbols_from_expr(expr, tokens, symbols);
             }
-            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Break
+            | StmtKind::Continue
+            | StmtKind::Return(None)
+            | StmtKind::Struct { .. } => {}
         }
     }
 
@@ -285,7 +288,7 @@ impl MpDefinition {
             Parenthesized(e) => {
                 self.extract_symbols_from_expr(e, tokens, symbols);
             }
-            Number(_) | Boolean(_) | String(_) | Variable(_) => {}
+            Number(_) | Boolean(_) | String(_) | Variable(_) | StructInstance { .. } => {}
         }
     }
 

@@ -166,6 +166,14 @@ impl MpHover {
                     range: None,
                 })
             }
+            TokenKind::Modulo => {
+                Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(
+                        "**%** - Modulo operator\n\nReturns the remainder of the division of the left operand by the right operand.".to_string()
+                    )),
+                    range: None,
+                })
+            }
             TokenKind::Equal => {
                 Some(Hover {
                     contents: HoverContents::Scalar(MarkedString::String(

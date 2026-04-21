@@ -46,6 +46,10 @@ pub enum ExprKind {
         object: Box<Expr>,
         property: String,
     },
+    StructInstance {
+        name: String,
+        args: Vec<Expr>,
+    },
 }
 
 impl Expr {
@@ -102,6 +106,9 @@ impl Expr {
             ExprKind::GetProperty { object, .. } => {
                 children.push(object);
             }
+            ExprKind::StructInstance { args, .. } => {
+                children.extend(args);
+            }
         }
         children
     }
@@ -125,6 +132,10 @@ pub enum StmtKind {
         name: String,
         params: Vec<String>,
         body: Expr,
+    },
+    Struct {
+        name: String,
+        fields: Vec<(String, Option<Expr>)>,
     },
     Break,
     Continue,

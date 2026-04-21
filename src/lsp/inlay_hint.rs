@@ -120,7 +120,10 @@ impl MpInlayHints {
             StmtKind::Return(Some(expr)) => {
                 self.extract_hints_from_expr(expr, content, hints, var_types);
             }
-            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+            StmtKind::Break
+            | StmtKind::Continue
+            | StmtKind::Return(None)
+            | StmtKind::Struct { .. } => {}
         }
     }
 
@@ -191,7 +194,7 @@ impl MpInlayHints {
             Parenthesized(e) => {
                 self.extract_hints_from_expr(e, content, hints, var_types);
             }
-            Number(_) | Boolean(_) | String(_) | Variable(_) => {}
+            Number(_) | Boolean(_) | String(_) | Variable(_) | StructInstance { .. } => {}
         }
     }
 
@@ -238,9 +241,11 @@ impl MpInlayHints {
                 }
             }
             BinaryOp { op, .. } => match op {
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Multiply | TokenKind::Divide => {
-                    "number".to_string()
-                }
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Multiply
+                | TokenKind::Divide
+                | TokenKind::Modulo => "number".to_string(),
                 TokenKind::Equal
                 | TokenKind::NotEqual
                 | TokenKind::GreaterThan
@@ -260,6 +265,7 @@ impl MpInlayHints {
             Index { .. } => "unknown".to_string(),
             GetProperty { .. } => "unknown".to_string(),
             UnaryOp { .. } => "unknown".to_string(),
+            StructInstance { .. } => "unknown".to_string(),
         }
     }
 

@@ -2,7 +2,7 @@ use std::{
     cell::RefCell,
     collections::HashMap,
     fmt::{self, Display},
-    ops::{Add, Div, Mul, Neg, Sub},
+    ops::{Add, Div, Mul, Neg, Rem, Sub},
     rc::Rc,
     str::FromStr,
 };
@@ -13,6 +13,29 @@ use crate::runtime::environment::function::Function;
 pub enum EnvironmentValue {
     Variable(Value),
     Function(Function),
+    Struct(StructDef),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDef {
+    pub name: String,
+    pub fields: Vec<(String, Option<Value>)>,
+}
+
+impl fmt::Display for StructDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "struct {} {{ ", self.name)?;
+        for (i, (field_name, default_value)) in self.fields.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", field_name)?;
+            if let Some(val) = default_value {
+                write!(f, " = {}", val)?;
+            }
+        }
+        write!(f, " }}")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +136,17 @@ impl Div for Number {
         }
     }
 }
+impl Rem for Number {
+    type Output = Self;
+
+    fn rem(self, other: Self) -> Self {
+        match (self, other) {
+            (Number::Int(i1), Number::Int(i2)) => Number::Int(i1 % i2),
+            (Number::Float(f1), Number::Float(f2)) => Number::Float(f1 % f2),
+            _ => panic!("Cannot calculate remainder of non-numeric values"),
+        }
+    }
+}
 
 impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -168,6 +202,10 @@ pub enum Value {
     String(String),
     Array(Rc<RefCell<Vec<Value>>>),
     Object(HashMap<String, Value>),
+    StructInstance {
+        name: String,
+        fields: HashMap<String, Value>,
+    },
     Nil,
 }
 
@@ -200,6 +238,16 @@ impl fmt::Display for Value {
                     write!(f, "{k}: {v}")?;
                 }
                 write!(f, "}}")
+            }
+            Value::StructInstance { name, fields } => {
+                write!(f, "{} {{ ", name)?;
+                for (i, (k, v)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", k, v)?;
+                }
+                write!(f, " }}")
             }
             Value::Nil => write!(f, "nil"),
         }

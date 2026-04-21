@@ -4,7 +4,6 @@ use std::str::FromStr;
 use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct MpWorkspaceSymbols;
 
 impl Default for MpWorkspaceSymbols {

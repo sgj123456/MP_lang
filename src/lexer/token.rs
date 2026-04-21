@@ -36,6 +36,7 @@ pub enum TokenKind {
     Minus,
     Multiply,
     Divide,
+    Modulo,
     Assign,
     Equal,
     NotEqual,
@@ -64,6 +65,7 @@ pub enum TokenKind {
     Break,
     Continue,
     Return,
+    Struct,
     Unknown,
     Eof,
 }
@@ -80,6 +82,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Minus => write!(f, "-"),
             TokenKind::Multiply => write!(f, "*"),
             TokenKind::Divide => write!(f, "/"),
+            TokenKind::Modulo => write!(f, "%"),
             TokenKind::Assign => write!(f, "="),
             TokenKind::Equal => write!(f, "=="),
             TokenKind::NotEqual => write!(f, "!="),
@@ -108,6 +111,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Break => write!(f, "break"),
             TokenKind::Continue => write!(f, "continue"),
             TokenKind::Return => write!(f, "return"),
+            TokenKind::Struct => write!(f, "struct"),
             TokenKind::Eof => write!(f, "End of file"),
             TokenKind::Unknown => write!(f, "Unknown"),
         }

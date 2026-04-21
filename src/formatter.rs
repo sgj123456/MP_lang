@@ -86,6 +86,23 @@ impl Formatter {
                 self.add_indent();
                 self.output.push_str("continue");
             }
+            StmtKind::Struct { name, fields } => {
+                self.add_indent();
+                self.output.push_str("struct ");
+                self.output.push_str(name);
+                self.output.push_str(" { ");
+                for (i, (field_name, default_value)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.output.push_str(field_name);
+                    if let Some(value) = default_value {
+                        self.output.push_str(" = ");
+                        self.format_expr(value);
+                    }
+                }
+                self.output.push_str(" }");
+            }
         }
     }
 
@@ -201,6 +218,17 @@ impl Formatter {
                 self.format_expr(object);
                 self.output.push(':');
                 self.output.push_str(property);
+            }
+            ExprKind::StructInstance { name, args } => {
+                self.output.push_str(name);
+                self.output.push('(');
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.format_expr(arg);
+                }
+                self.output.push(')');
             }
         }
     }
