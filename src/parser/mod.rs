@@ -44,8 +44,13 @@ impl Parser {
             .filter(|token| !matches!(token.kind, TokenKind::Comment(_)))
             .cloned()
             .collect();
+        let mut previous_current = self.current;
         while !self.is_at_end() {
             statements.push(self.statement());
+            if self.current == previous_current {
+                self.advance();
+            }
+            previous_current = self.current;
         }
         statements
     }
@@ -421,6 +426,7 @@ impl Parser {
 
                 if is_object {
                     let mut properties = Vec::new();
+                    let mut previous_current = self.current;
                     while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                         self.delete_empty_lines();
                         let key = if let TokenKind::String(name) = &self.peek().kind {
@@ -438,6 +444,10 @@ impl Parser {
                         let value = self.expression();
                         properties.push((key, value));
 
+                        if self.current == previous_current {
+                            self.advance();
+                        }
+                        previous_current = self.current;
                         if !self.match_token(&TokenKind::Comma) {
                             break;
                         }
@@ -452,8 +462,13 @@ impl Parser {
                 }
 
                 let mut statements = Vec::new();
+                let mut previous_current = self.current;
                 while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
                     statements.push(self.statement().kind);
+                    if self.current == previous_current {
+                        self.advance();
+                    }
+                    previous_current = self.current;
                 }
                 self.consume(&TokenKind::RightBrace, "Expect '}' after block");
                 Expr {
@@ -465,9 +480,14 @@ impl Parser {
                 self.advance();
                 self.delete_empty_lines();
                 let mut elements = Vec::new();
+                let mut previous_current = self.current;
                 while !self.check(&TokenKind::RightBracket) && !self.is_at_end() {
                     elements.push(self.expression());
                     self.delete_empty_lines();
+                    if self.current == previous_current {
+                        self.advance();
+                    }
+                    previous_current = self.current;
                     if !self.match_token(&TokenKind::Comma) {
                         break;
                     }
@@ -641,6 +661,7 @@ impl Parser {
         self.consume(&TokenKind::LeftBrace, "Expect '{' after struct name");
 
         let mut fields = Vec::new();
+        let mut previous_current = self.current;
         while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
             self.delete_empty_lines();
             let field_name = self.consume_identifier();
@@ -654,6 +675,10 @@ impl Parser {
             };
             fields.push((field_name, default_value));
 
+            if self.current == previous_current {
+                self.advance();
+            }
+            previous_current = self.current;
             if !self.match_token(&TokenKind::Comma) {
                 break;
             }
