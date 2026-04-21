@@ -12,7 +12,7 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         // Empty file should have no diagnostics
-        assert_eq!(result.len(), 0, "Empty file should have no diagnostics");
+        assert_eq!(result.0.len(), 0, "Empty file should have no diagnostics");
     }
 
     #[test]
@@ -22,7 +22,7 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         // Valid code should have no diagnostics
-        assert_eq!(result.len(), 0, "Valid code should have no diagnostics");
+        assert_eq!(result.0.len(), 0, "Valid code should have no diagnostics");
     }
 
     #[test]
@@ -32,11 +32,11 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert!(
-            result.len() > 0,
+            result.0.len() > 0,
             "Should have lexer error for invalid number"
         );
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP001".to_string()
             ))
@@ -50,11 +50,11 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert!(
-            result.len() > 0,
+            result.0.len() > 0,
             "Should have lexer error for unexpected character"
         );
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP001".to_string()
             ))
@@ -68,11 +68,11 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert!(
-            result.len() > 0,
+            result.0.len() > 0,
             "Should have lexer error for unclosed string"
         );
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP001".to_string()
             ))
@@ -86,11 +86,11 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert!(
-            result.len() > 0,
+            result.0.len() > 0,
             "Should have lexer error for unclosed comment"
         );
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP001".to_string()
             ))
@@ -104,7 +104,7 @@ mod tests {
         let result = diagnostics.analyze(content);
 
         assert_eq!(
-            result.len(),
+            result.0.len(),
             0,
             "Valid escape sequences should not produce errors"
         );
@@ -116,12 +116,9 @@ mod tests {
         let content = "let x = ";
         let result = diagnostics.analyze(content);
 
-        assert!(
-            result.len() > 0,
-            "Should have parser error for unexpected token"
-        );
+        assert!(result.0.len() > 0, "Should have parser error");
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP002".to_string()
             ))
@@ -134,9 +131,9 @@ mod tests {
         let content = "let x = @\nlet y = 10";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have lexer error");
+        assert!(result.0.len() > 0, "Should have lexer error");
         assert_eq!(
-            result[0].code,
+            result.0[0].code,
             Some(tower_lsp_server::ls_types::NumberOrString::String(
                 "MP001".to_string()
             ))
@@ -149,8 +146,8 @@ mod tests {
         let content = "let x = @";
         let result = diagnostics.analyze(content);
 
-        assert!(result.len() > 0, "Should have diagnostic");
-        let range = &result[0].range;
+        assert!(result.0.len() > 0, "Should have diagnostic");
+        let range = &result.0[0].range;
         assert!(range.start.line == 0, "Should have valid line at 0");
         assert!(
             range.start.character > 0,
@@ -177,12 +174,12 @@ mod tests {
     #[test]
     fn test_completion_builtin_functions() {
         let completer = MpCompleter::new();
-        let content = "pr";
+        let content = "p";
         let completions = completer.complete(
             content,
             Position {
                 line: 0,
-                character: 2,
+                character: 1,
             },
         );
 
@@ -191,10 +188,26 @@ mod tests {
     }
 
     #[test]
-    fn test_hover_keywords() {
-        let hover = MpHover::new();
-        let content = "let";
-        let hover_result = hover.hover(
+    fn test_completion_variables() {
+        let completer = MpCompleter::new();
+        let content = "let x = 10\nx";
+        let completions = completer.complete(
+            content,
+            Position {
+                line: 1,
+                character: 1,
+            },
+        );
+
+        let has_x = completions.iter().any(|c| c.label == "x");
+        assert!(has_x, "Completion should include variable 'x'");
+    }
+
+    #[test]
+    fn test_completion_empty_line() {
+        let completer = MpCompleter::new();
+        let content = "";
+        let completions = completer.complete(
             content,
             Position {
                 line: 0,
@@ -202,10 +215,9 @@ mod tests {
             },
         );
 
-        // Hover at position 0 should work
         assert!(
-            hover_result.is_some() || !content.is_empty(),
-            "Hover test executed"
+            !completions.is_empty(),
+            "Should have completions on empty line"
         );
     }
 
@@ -213,7 +225,37 @@ mod tests {
     fn test_hover_builtin_functions() {
         let hover = MpHover::new();
         let content = "print";
-        let hover_result = hover.hover(
+        let result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
+        assert!(result.is_some(), "Should have hover information for print");
+    }
+
+    #[test]
+    fn test_hover_keywords() {
+        let hover = MpHover::new();
+        let content = "let";
+        let result = hover.hover(
+            content,
+            Position {
+                line: 0,
+                character: 0,
+            },
+        );
+
+        assert!(result.is_some(), "Should have hover information for let");
+    }
+
+    #[test]
+    fn test_hover_numbers() {
+        let hover = MpHover::new();
+        let content = "42";
+        let result = hover.hover(
             content,
             Position {
                 line: 0,
@@ -222,64 +264,34 @@ mod tests {
         );
 
         assert!(
-            hover_result.is_some() || !content.is_empty(),
-            "Hover test executed"
+            result.is_some(),
+            "Should have hover information for numbers"
         );
     }
 
     #[test]
-    fn test_completion_variables() {
-        let completer = MpCompleter::new();
-        let content = "let x = 10\nlet ";
-        let completions = completer.complete(
-            content,
-            Position {
-                line: 1,
-                character: 4,
-            },
-        );
-
-        // Should suggest variables
-        assert!(completions.len() > 0, "Should have completions");
-    }
-
-    #[test]
-    fn test_hover_numbers() {
+    fn test_hover_operators() {
         let hover = MpHover::new();
-        let content = "123";
-        let _hover_result = hover.hover(
+        let content = "1 + 2";
+        let result = hover.hover(
             content,
             Position {
                 line: 0,
-                character: 0,
+                character: 2,
             },
         );
 
-        // Test executes without panic
-        assert!(true, "Hover test for numbers executed");
+        assert!(
+            result.is_some(),
+            "Should have hover information for operators"
+        );
     }
 
     #[test]
     fn test_hover_strings() {
         let hover = MpHover::new();
         let content = "\"hello\"";
-        let _hover_result = hover.hover(
-            content,
-            Position {
-                line: 0,
-                character: 1,
-            },
-        );
-
-        // Test executes without panic
-        assert!(true, "Hover test for strings executed");
-    }
-
-    #[test]
-    fn test_completion_empty_line() {
-        let completer = MpCompleter::new();
-        let content = " ";
-        let _completions = completer.complete(
+        let result = hover.hover(
             content,
             Position {
                 line: 0,
@@ -287,23 +299,9 @@ mod tests {
             },
         );
 
-        // Should have some completions
-        assert!(true, "Should have completions");
-    }
-
-    #[test]
-    fn test_hover_operators() {
-        let hover = MpHover::new();
-        let content = "+";
-        let _hover_result = hover.hover(
-            content,
-            Position {
-                line: 0,
-                character: 0,
-            },
+        assert!(
+            result.is_some(),
+            "Should have hover information for strings"
         );
-
-        // Test executes without panic
-        assert!(true, "Hover test for operators executed");
     }
 }

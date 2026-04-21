@@ -21,15 +21,16 @@ impl MpHover {
         let line = position.line as usize + 1;
         let col = position.character as usize + 1;
 
-        for (i, token) in tokens.iter().enumerate() {
+        for token in &tokens {
+            let token_end_col = token.span.column + token.kind.to_string().len();
+            if token.span.line == line && token.span.column <= col && token_end_col > col {
+                return self.get_hover_for_token(token);
+            }
+        }
+
+        for token in tokens.iter().rev() {
             if token.span.line == line && token.span.column <= col {
-                if let Some(next_token) = tokens.get(i + 1) {
-                    if next_token.span.line == line && next_token.span.column > col {
-                        return self.get_hover_for_token(token);
-                    }
-                } else {
-                    return self.get_hover_for_token(token);
-                }
+                return self.get_hover_for_token(token);
             }
         }
 

@@ -1,7 +1,7 @@
 use crate::lexer::{TokenKind, tokenize};
 use crate::parser::{Stmt, StmtKind, parse};
-use tower_lsp_server::ls_types::*;
 use std::str::FromStr;
+use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
 pub struct MpDefinition;
@@ -36,23 +36,28 @@ impl MpDefinition {
 
         let symbols = self.build_symbol_table(&tokens, content);
 
-        if let Some(symbol_infos) = symbols.get(&target_name)
-            && let Some(first) = symbol_infos.first()
-        {
-            let location = Location {
-                uri: Uri::from_str(uri).unwrap(),
-                range: Range {
-                    start: Position {
-                        line: (first.line - 1) as u32,
-                        character: (first.column - 1) as u32,
+        if let Some(symbol_infos) = symbols.get(&target_name) {
+            let mut candidates: Vec<&SymbolInfo> = symbol_infos
+                .iter()
+                .filter(|s| s.line < line || (s.line == line && s.column <= col))
+                .collect();
+
+            if let Some(best) = candidates.pop() {
+                let location = Location {
+                    uri: Uri::from_str(uri).unwrap(),
+                    range: Range {
+                        start: Position {
+                            line: (best.line - 1) as u32,
+                            character: (best.column - 1) as u32,
+                        },
+                        end: Position {
+                            line: (best.line - 1) as u32,
+                            character: (best.column + target_name.len() - 1) as u32,
+                        },
                     },
-                    end: Position {
-                        line: (first.line - 1) as u32,
-                        character: (first.column + target_name.len() - 1) as u32,
-                    },
-                },
-            };
-            return Some(GotoDefinitionResponse::Scalar(location));
+                };
+                return Some(GotoDefinitionResponse::Scalar(location));
+            }
         }
 
         self.find_function_call_definition(&tokens, &target_name, uri)
@@ -180,27 +185,107 @@ impl MpDefinition {
         symbols: &mut std::collections::HashMap<String, Vec<SymbolInfo>>,
     ) {
         match &stmt.kind {
-            StmtKind::Function { name, .. } => {
-                if let Some(token) = self.find_token_by_name(name, tokens) {
-                    symbols.entry(name.clone()).or_default().push(SymbolInfo {
-                        _name: name.clone(),
-                        line: token.span.line,
-                        column: token.span.column,
-                        _kind: SymbolKind::FUNCTION,
-                    });
+            StmtKind::Function {
+                name,
+                params: _,
+                body,
+                ..
+            } => {
+                symbols.entry(name.clone()).or_default().push(SymbolInfo {
+                    _name: name.clone(),
+                    line: stmt.span.line,
+                    column: stmt.span.column,
+                    _kind: SymbolKind::FUNCTION,
+                });
+                self.extract_symbols_from_expr(body, tokens, symbols);
+            }
+            StmtKind::Let {
+                name, name_span, ..
+            } => {
+                symbols.entry(name.clone()).or_default().push(SymbolInfo {
+                    _name: name.clone(),
+                    line: name_span.line,
+                    column: name_span.column,
+                    _kind: SymbolKind::VARIABLE,
+                });
+            }
+            StmtKind::Expr(expr) | StmtKind::Result(expr) => {
+                self.extract_symbols_from_expr(expr, tokens, symbols);
+            }
+            StmtKind::Return(Some(expr)) => {
+                self.extract_symbols_from_expr(expr, tokens, symbols);
+            }
+            StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
+        }
+    }
+
+    fn extract_symbols_from_expr(
+        &self,
+        expr: &crate::parser::Expr,
+        tokens: &[crate::lexer::Token],
+        symbols: &mut std::collections::HashMap<String, Vec<SymbolInfo>>,
+    ) {
+        use crate::parser::ExprKind::*;
+
+        match &expr.kind {
+            If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.extract_symbols_from_expr(condition, tokens, symbols);
+                self.extract_symbols_from_expr(then_branch, tokens, symbols);
+                if let Some(else_b) = else_branch {
+                    self.extract_symbols_from_expr(else_b, tokens, symbols);
                 }
             }
-            StmtKind::Let { name, .. } => {
-                if let Some(token) = self.find_token_by_name(name, tokens) {
-                    symbols.entry(name.clone()).or_default().push(SymbolInfo {
-                        _name: name.clone(),
-                        line: token.span.line,
-                        column: token.span.column,
-                        _kind: SymbolKind::VARIABLE,
-                    });
+            While { condition, body } => {
+                self.extract_symbols_from_expr(condition, tokens, symbols);
+                self.extract_symbols_from_expr(body, tokens, symbols);
+            }
+            Block(stmts) => {
+                for stmt in stmts {
+                    let dummy_span = expr.span;
+                    let stmt = crate::parser::Stmt {
+                        kind: stmt.clone(),
+                        span: dummy_span,
+                    };
+                    self.extract_symbols_from_stmt(&stmt, tokens, symbols);
                 }
             }
-            _ => {}
+            BinaryOp { left, right, .. } => {
+                self.extract_symbols_from_expr(left, tokens, symbols);
+                self.extract_symbols_from_expr(right, tokens, symbols);
+            }
+            UnaryOp { expr, .. } => {
+                self.extract_symbols_from_expr(expr, tokens, symbols);
+            }
+            FunctionCall { args, .. } => {
+                for arg in args {
+                    self.extract_symbols_from_expr(arg, tokens, symbols);
+                }
+            }
+            Array(items) => {
+                for item in items {
+                    self.extract_symbols_from_expr(item, tokens, symbols);
+                }
+            }
+            Object(fields) => {
+                for (_, value) in fields {
+                    self.extract_symbols_from_expr(value, tokens, symbols);
+                }
+            }
+            Index { object, index } => {
+                self.extract_symbols_from_expr(object, tokens, symbols);
+                self.extract_symbols_from_expr(index, tokens, symbols);
+            }
+            GetProperty { object, .. } => {
+                self.extract_symbols_from_expr(object, tokens, symbols);
+            }
+            Parenthesized(e) => {
+                self.extract_symbols_from_expr(e, tokens, symbols);
+            }
+            Number(_) | Boolean(_) | String(_) | Variable(_) => {}
         }
     }
 

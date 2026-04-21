@@ -165,7 +165,7 @@ impl TypeAnalyzer {
 
     fn analyze_stmt(&mut self, stmt: &Stmt) {
         match &stmt.kind {
-            StmtKind::Let { name, value } => {
+            StmtKind::Let { name, value, .. } => {
                 let var_type = TypeInfo::from_expr(value);
                 self.variables.insert(name.clone(), var_type);
             }

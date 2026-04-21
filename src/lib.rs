@@ -1,13 +1,13 @@
+pub mod formatter;
 pub mod lexer;
 pub mod lsp;
 pub mod parser;
 pub mod runtime;
-pub mod formatter;
 
+pub use formatter::format_code;
 pub use lsp::MpLanguageServer;
 pub use runtime::environment::{BuiltinFunction, Environment, UserFunction, Value};
 pub use runtime::error::InterpreterError;
-pub use formatter::format_code;
 
 use rustyline::{
     Completer, Config, Editor, Helper, Highlighter, Hinter, Validator, error::ReadlineError,

@@ -1,4 +1,4 @@
-use mp_lang::{run_file, run_repl, format_code};
+use mp_lang::{format_code, run_file, run_repl};
 use std::env;
 use std::fs;
 

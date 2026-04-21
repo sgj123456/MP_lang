@@ -36,7 +36,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, I
             eval_expr(expr, env)?;
             Ok(Value::Nil)
         }
-        StmtKind::Let { name, value } => {
+        StmtKind::Let { name, value, .. } => {
             let value = eval_expr(value, env)?;
             env.borrow_mut().define(name.clone(), value)?;
             Ok(Value::Nil)

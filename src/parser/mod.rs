@@ -3,11 +3,11 @@ mod error;
 
 pub use ast::{Expr, ExprKind, Stmt, StmtKind};
 
+use crate::runtime::environment::value::Number;
 use crate::{
     lexer::{Token, TokenKind},
     parser::error::ParserError,
 };
-use crate::runtime::environment::value::Number;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -143,10 +143,15 @@ impl Parser {
 
     fn let_statement(&mut self) -> Stmt {
         let name = self.consume_identifier();
+        let name_span = self.previous().span;
         self.consume(&TokenKind::Assign, "Expect '=' after variable name");
         let value = self.expression();
         Stmt {
-            kind: StmtKind::Let { name, value },
+            kind: StmtKind::Let {
+                name,
+                name_span,
+                value,
+            },
             span: self.previous().span,
         }
     }

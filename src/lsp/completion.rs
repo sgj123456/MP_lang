@@ -24,7 +24,8 @@ impl MpCompleter {
                 "nil",
             ],
             builtin_functions: vec![
-                "print", "input", "len", "type", "str", "int", "float", "random", "push", "pop", "time",
+                "print", "input", "len", "type", "str", "int", "float", "random", "push", "pop",
+                "time",
             ],
             builtin_types: vec![
                 "Number", "String", "Boolean", "Array", "Object", "Function", "Nil",
@@ -36,6 +37,13 @@ impl MpCompleter {
         let mut items = Vec::new();
 
         let lines: Vec<&str> = content.lines().collect();
+
+        if content.is_empty() {
+            items.extend(self.get_keyword_completions());
+            items.extend(self.get_builtin_function_completions());
+            return items;
+        }
+
         if position.line as usize >= lines.len() {
             return items;
         }
@@ -186,7 +194,7 @@ impl MpCompleter {
             let ast = parse(tokens.clone());
             for stmt in &ast {
                 match &stmt.kind {
-                    StmtKind::Let { name, value } => {
+                    StmtKind::Let { name, value, .. } => {
                         let var_type = self.infer_type(value);
                         variables.insert(name.clone(), var_type);
                     }
@@ -203,10 +211,11 @@ impl MpCompleter {
                 if let TokenKind::Identifier(name) = &token.kind
                     && token.span.line <= position.line as usize
                     && let Some(next_token) = iter.peek()
-                        && matches!(next_token.kind, TokenKind::Assign)
-                        && !variables.contains_key(name) {
-                            variables.insert(name.clone(), "Unknown".to_string());
-                        }
+                    && matches!(next_token.kind, TokenKind::Assign)
+                    && !variables.contains_key(name)
+                {
+                    variables.insert(name.clone(), "Unknown".to_string());
+                }
             }
         }
 

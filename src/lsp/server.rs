@@ -203,7 +203,10 @@ impl LanguageServer for MpLanguageServer {
                     start: Position::new(0, 0),
                     end: Position::new(u32::MAX, u32::MAX),
                 };
-                Ok(Some(vec![TextEdit { range, new_text: formatted }]))
+                Ok(Some(vec![TextEdit {
+                    range,
+                    new_text: formatted,
+                }]))
             }
             Err(_) => Ok(None),
         }

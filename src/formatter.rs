@@ -1,7 +1,7 @@
-use crate::lexer::{Span, TokenKind};
-use crate::parser::{Expr, ExprKind, Stmt, StmtKind};
-use crate::parser;
 use crate::lexer;
+use crate::lexer::{Span, TokenKind};
+use crate::parser;
+use crate::parser::{Expr, ExprKind, Stmt, StmtKind};
 
 pub struct Formatter {
     indent: usize,
@@ -40,7 +40,7 @@ impl Formatter {
 
     fn format_statement(&mut self, stmt: &Stmt) {
         match &stmt.kind {
-            StmtKind::Let { name, value } => {
+            StmtKind::Let { name, value, .. } => {
                 self.add_indent();
                 self.output.push_str("let ");
                 self.output.push_str(name);
@@ -147,10 +147,7 @@ impl Formatter {
                     self.format_expr(else_expr);
                 }
             }
-            ExprKind::While {
-                condition,
-                body,
-            } => {
+            ExprKind::While { condition, body } => {
                 self.output.push_str("while ");
                 self.format_expr(condition);
                 self.output.push(' ');

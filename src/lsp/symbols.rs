@@ -55,7 +55,7 @@ impl MpSymbols {
                 };
                 symbols.push(symbol);
             }
-            StmtKind::Let { name, value } => {
+            StmtKind::Let { name, value, .. } => {
                 if name.is_empty() {
                     return;
                 }

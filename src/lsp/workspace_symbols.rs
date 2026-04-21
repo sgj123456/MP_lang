@@ -1,7 +1,7 @@
 use crate::lexer::tokenize;
 use crate::parser::{Stmt, StmtKind, parse};
-use tower_lsp_server::ls_types::*;
 use std::str::FromStr;
+use tower_lsp_server::ls_types::*;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -26,9 +26,10 @@ impl MpWorkspaceSymbols {
             let ast = parse(tokens);
             for stmt in ast {
                 if let Some(info) = self.extract_symbol(&stmt, uri)
-                    && (query.is_empty() || info.name.to_lowercase().contains(&query_lower)) {
-                        symbols.push(info);
-                    }
+                    && (query.is_empty() || info.name.to_lowercase().contains(&query_lower))
+                {
+                    symbols.push(info);
+                }
             }
         }
 
