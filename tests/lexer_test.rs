@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests {
     use mp_lang::{
-        lexer::{Span, TokenKind, tokenize},
+        lexer::{Span, TokenKind, tokenize, tokenize_with_errors},
         runtime::environment::value::Number,
     };
 
     #[test]
     fn test_number() {
-        let tokens = tokenize("123 45.67").unwrap();
+        let tokens = tokenize("123 45.67");
         assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::Number(Number::Float(45.67)));
@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn test_boolean() {
-        let tokens = tokenize("true false").unwrap();
+        let tokens = tokenize("true false");
         assert_eq!(tokens[0].kind, TokenKind::Boolean(true));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::Boolean(false));
@@ -27,7 +27,7 @@ mod tests {
 
     #[test]
     fn test_string() {
-        let tokens = tokenize("\"hello\" \"world\"").unwrap();
+        let tokens = tokenize("\"hello\" \"world\"");
         assert_eq!(tokens[0].kind, TokenKind::String("hello".to_string()));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::String("world".to_string()));
@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_punctuation() {
-        let tokens = tokenize(", ; ( ) [ ] { }").unwrap();
+        let tokens = tokenize(", ; ( ) [ ] { }");
         assert_eq!(tokens[0].kind, TokenKind::Comma);
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::Semicolon);
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_operators() {
-        let tokens = tokenize("+ - * /").unwrap();
+        let tokens = tokenize("+ - * /");
         assert_eq!(tokens[0].kind, TokenKind::Plus);
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::Minus);
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let tokens = tokenize("let if else").unwrap();
+        let tokens = tokenize("let if else");
         assert_eq!(tokens[0].kind, TokenKind::Let);
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::If);
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_identifiers() {
-        let tokens = tokenize("x y_z").unwrap();
+        let tokens = tokenize("x y_z");
         assert_eq!(tokens[0].kind, TokenKind::Identifier("x".to_string()));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::Identifier("y_z".to_string()));
@@ -113,7 +113,8 @@ mod tests {
 
     #[test]
     fn test_strings() {
-        let tokens = tokenize("\"hello\" \"world\\n\" \"say \\\"hi\\\"\"").unwrap();
+        let (tokens, errors) = tokenize_with_errors("\"hello\" \"world\\n\" \"say \\\"hi\\\"\"");
+        assert!(errors.is_empty());
         assert_eq!(tokens[0].kind, TokenKind::String("hello".to_string()));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[1].kind, TokenKind::String("world\n".to_string()));
@@ -127,13 +128,11 @@ mod tests {
             }
         );
         assert_eq!(tokens[3].kind, TokenKind::Eof);
-
-        assert!(tokenize("\"unclosed").is_err());
     }
 
     #[test]
     fn test_comments() {
-        let tokens = tokenize("// This is a comment.\n123").unwrap();
+        let tokens = tokenize("// This is a comment.\n123");
         assert_eq!(
             tokens[0].kind,
             TokenKind::Comment(" This is a comment.".into())
@@ -143,7 +142,7 @@ mod tests {
         assert_eq!(tokens[2].span, Span { line: 2, column: 1 });
         assert_eq!(tokens[3].kind, TokenKind::Eof);
 
-        let tokens = tokenize("123 // This is a number.\n+ 456").unwrap();
+        let tokens = tokenize("123 // This is a number.\n+ 456");
         assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(tokens[3].kind, TokenKind::Plus);
@@ -152,7 +151,7 @@ mod tests {
         assert_eq!(tokens[4].span, Span { line: 2, column: 3 });
         assert_eq!(tokens[5].kind, TokenKind::Eof);
 
-        let tokens = tokenize("123 /* This is a multi-line\ncomment */ 456").unwrap();
+        let tokens = tokenize("123 /* This is a multi-line\ncomment */ 456");
         assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(
@@ -170,7 +169,7 @@ mod tests {
         );
         assert_eq!(tokens[3].kind, TokenKind::Eof);
 
-        let tokens = tokenize("123 /* let x = 5 */ 456").unwrap();
+        let tokens = tokenize("123 /* let x = 5 */ 456");
         assert_eq!(tokens[0].kind, TokenKind::Number(Number::Int(123)));
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });
         assert_eq!(
@@ -187,14 +186,12 @@ mod tests {
             }
         );
         assert_eq!(tokens[3].kind, TokenKind::Eof);
-
-        assert!(tokenize("123 /* Unclosed comment").is_err());
     }
 
     #[test]
     fn test_position_tracking() {
         let input = "let x = 123\nif x > 0 {\n  return x\n}";
-        let tokens = tokenize(input).unwrap();
+        let tokens = tokenize(input);
 
         assert_eq!(tokens[0].kind, TokenKind::Let);
         assert_eq!(tokens[0].span, Span { line: 1, column: 1 });

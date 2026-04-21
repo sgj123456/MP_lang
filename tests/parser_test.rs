@@ -1,14 +1,15 @@
 #[cfg(test)]
 mod tests {
     use mp_lang::{
-        lexer::{TokenKind, tokenize},
+        lexer::{TokenKind, tokenize_with_errors},
         parser::{ExprKind, StmtKind, parse},
         runtime::environment::value::Number,
     };
 
     #[test]
     fn test_number_expr() {
-        let tokens = tokenize("123").unwrap();
+        let (tokens, errors) = tokenize_with_errors("123");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -21,7 +22,8 @@ mod tests {
 
     #[test]
     fn test_string_expr() {
-        let tokens = tokenize("\"hello\"").unwrap();
+        let (tokens, errors) = tokenize_with_errors("\"hello\"");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -34,7 +36,8 @@ mod tests {
 
     #[test]
     fn test_boolean_expr() {
-        let tokens = tokenize("true").unwrap();
+        let (tokens, errors) = tokenize_with_errors("true");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -47,7 +50,8 @@ mod tests {
 
     #[test]
     fn test_array_expr() {
-        let tokens = tokenize("[1, 2, 3]").unwrap();
+        let (tokens, errors) = tokenize_with_errors("[1, 2, 3]");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -64,7 +68,8 @@ mod tests {
 
     #[test]
     fn test_object_expr() {
-        let tokens = tokenize("{\"a\": 1, \"b\": 2}").unwrap();
+        let (tokens, errors) = tokenize_with_errors("{\"a\": 1, \"b\": 2}");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -81,7 +86,8 @@ mod tests {
 
     #[test]
     fn test_binary_op() {
-        let tokens = tokenize("1 + 2").unwrap();
+        let (tokens, errors) = tokenize_with_errors("1 + 2");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -100,7 +106,8 @@ mod tests {
 
     #[test]
     fn test_variable_decl() {
-        let tokens = tokenize("let x = 5").unwrap();
+        let (tokens, errors) = tokenize_with_errors("let x = 5");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -113,7 +120,8 @@ mod tests {
 
     #[test]
     fn test_if_expr() {
-        let tokens = tokenize("if 1 < 2 {3} else {4}").unwrap();
+        let (tokens, errors) = tokenize_with_errors("if 1 < 2 {3} else {4}");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -126,7 +134,8 @@ mod tests {
 
     #[test]
     fn test_operator_precedence() {
-        let tokens = tokenize("1 + 2 * 3").unwrap();
+        let (tokens, errors) = tokenize_with_errors("1 + 2 * 3");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -148,7 +157,8 @@ mod tests {
 
     #[test]
     fn test_function_decl() {
-        let tokens = tokenize("fn add(a, b) { a + b }").unwrap();
+        let (tokens, errors) = tokenize_with_errors("fn add(a, b) { a + b }");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -162,7 +172,8 @@ mod tests {
 
     #[test]
     fn test_function_call() {
-        let tokens = tokenize("add(1, 2)").unwrap();
+        let (tokens, errors) = tokenize_with_errors("add(1, 2)");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -175,7 +186,8 @@ mod tests {
 
     #[test]
     fn test_nested_function_call() {
-        let tokens = tokenize("add(1, multiply(2, 3))").unwrap();
+        let (tokens, errors) = tokenize_with_errors("add(1, multiply(2, 3))");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -193,28 +205,32 @@ mod tests {
 
     #[test]
     fn test_semicolon_separator() {
-        let tokens = tokenize("let x = 1; let y = 2").unwrap();
+        let (tokens, errors) = tokenize_with_errors("let x = 1; let y = 2");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_multiple_semicolons() {
-        let tokens = tokenize("let x = 1;;; let y = 2").unwrap();
+        let (tokens, errors) = tokenize_with_errors("let x = 1;;; let y = 2");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_semicolon_after_expr() {
-        let tokens = tokenize("1 + 2; 3 * 4").unwrap();
+        let (tokens, errors) = tokenize_with_errors("1 + 2; 3 * 4");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 2);
     }
 
     #[test]
     fn test_array_index_expression() {
-        let tokens = tokenize("arr[0]").unwrap();
+        let (tokens, errors) = tokenize_with_errors("arr[0]");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {
@@ -227,7 +243,8 @@ mod tests {
 
     #[test]
     fn test_object_property_expression() {
-        let tokens = tokenize("obj:name").unwrap();
+        let (tokens, errors) = tokenize_with_errors("obj:name");
+        assert!(errors.is_empty());
         let ast = parse(tokens);
         assert_eq!(ast.len(), 1);
         match &ast[0].kind {

@@ -395,7 +395,12 @@ impl<'a> Cursor<'a> {
     }
 }
 
-pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
+pub fn tokenize(input: &str) -> Vec<Token> {
+    let (tokens, _) = tokenize_with_errors(input);
+    tokens
+}
+
+pub fn tokenize_with_errors(input: &str) -> (Vec<Token>, Vec<LexerError>) {
     let mut cursor = Cursor::new(input);
     let mut tokens = Vec::new();
 
@@ -455,9 +460,5 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, LexerError> {
         span: cursor.span(),
     });
 
-    if cursor.errors().is_empty() {
-        Ok(tokens)
-    } else {
-        Err(cursor.errors()[0].clone())
-    }
+    (tokens, cursor.errors().to_vec())
 }

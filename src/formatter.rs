@@ -23,9 +23,17 @@ impl Formatter {
     }
 
     pub fn format(&mut self, source: &str) -> Result<String, String> {
-        let tokens = lexer::tokenize(source).map_err(|e| e.to_string())?;
-        let ast = parser::parse(tokens);
-        self.format_statements(&ast);
+        let (tokens, lexer_errors) = lexer::tokenize_with_errors(source);
+        let (stmts, parser_errors) = parser::parse_with_errors(tokens);
+        self.format_statements(&stmts);
+        if !lexer_errors.is_empty() || !parser_errors.is_empty() {
+            return Err(lexer_errors
+                .iter()
+                .map(|e| e.to_string())
+                .chain(parser_errors.iter().map(|e| e.to_string()))
+                .collect::<Vec<_>>()
+                .join("\n"));
+        }
         Ok(self.output.clone())
     }
 

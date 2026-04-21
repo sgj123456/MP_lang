@@ -16,7 +16,7 @@ impl MpHover {
     }
 
     pub fn hover(&self, content: &str, position: Position) -> Option<Hover> {
-        let tokens = tokenize(content).ok()?;
+        let tokens = tokenize(content);
 
         let line = position.line as usize + 1;
         let col = position.character as usize + 1;

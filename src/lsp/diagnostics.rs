@@ -1,4 +1,4 @@
-use crate::lexer::{Span, tokenize};
+use crate::lexer::{Span, tokenize_with_errors};
 use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse_with_errors};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -34,9 +34,10 @@ impl MpDiagnostics {
     pub fn analyze(&self, content: &str) -> (Vec<Diagnostic>, Vec<VariableType>) {
         let mut diagnostics = Vec::new();
 
-        let tokens = match tokenize(content) {
-            Ok(tokens) => tokens,
-            Err(e) => {
+        let (tokens, errors) = tokenize_with_errors(content);
+
+        if !errors.is_empty() {
+            for e in errors {
                 diagnostics.push(Diagnostic {
                     range: self.span_to_range(&e.span()),
                     severity: Some(DiagnosticSeverity::ERROR),
@@ -143,19 +144,26 @@ impl StaticAnalyzer {
     fn analyze(&mut self, content: &str) -> (Vec<Diagnostic>, Vec<VariableType>) {
         let mut diagnostics = Vec::new();
 
-        let tokens = match tokenize(content) {
-            Ok(tokens) => tokens,
-            Err(_) => return (diagnostics, Vec::new()),
-        };
+        let (tokens, errors) = tokenize_with_errors(content);
 
-        let (ast, _) = parse_with_errors(tokens);
+        if !errors.is_empty() {
+            for e in errors {
+                diagnostics.push(Diagnostic {
+                    range: self.span_to_range(&e.span()),
+                    severity: Some(DiagnosticSeverity::ERROR),
+                    code: Some(NumberOrString::String("MP001".to_string())),
+                    source: Some("mp-lang".to_string()),
+                    message: format!("Lexer error: {}", e.message()),
+                    ..Default::default()
+                });
+            }
+            return (diagnostics, Vec::new());
+        }
 
+        let (ast, _errors) = parse_with_errors(tokens);
         self.collect_definitions(&ast, &mut diagnostics);
-
         self.check_usages(&ast, &mut diagnostics);
-
         let variable_types = self.collect_variable_types();
-
         (diagnostics, variable_types)
     }
 

@@ -20,9 +20,18 @@ use std::{fs, result::Result};
 
 pub fn run_file(filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(filename)?;
-    let tokens = lexer::tokenize(&content)?;
-    let ast = parser::parse(tokens);
-    let result = runtime::eval::eval(ast);
+    let (tokens, lexer_errors) = lexer::tokenize_with_errors(&content);
+    if !lexer_errors.is_empty() {
+        let error_messages: Vec<String> = lexer_errors.iter().map(|e| e.to_string()).collect();
+        return Err(error_messages.join("\n").into());
+    }
+    let (stmts, errors) = parser::parse_with_errors(tokens);
+    if !errors.is_empty() {
+        let error_messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+        return Err(error_messages.join("\n").into());
+    }
+
+    let result = runtime::eval::eval(stmts);
     match result {
         Ok(_) | Err(InterpreterError::Return(_)) => {}
         Err(e) => eprintln!("Execution error: {e}"),
@@ -42,16 +51,23 @@ pub fn handle_command(cmd: &str, env: &Rc<RefCell<Environment>>) -> bool {
         "clear" => {
             println!("Environment cleared.");
         }
-        _ => match lexer::tokenize(cmd) {
-            Ok(tokens) => {
-                let ast = parser::parse(tokens);
-                match runtime::eval::eval_with_env(ast, env) {
-                    Ok(result) => println!("=> {result:?}"),
-                    Err(e) => eprintln!("Execution error: {e}"),
-                }
+        _ => {
+            let (tokens, lexer_errors) = lexer::tokenize_with_errors(cmd);
+            if !lexer_errors.is_empty() {
+                eprintln!("Lexical error: {lexer_errors:?}");
+                return true;
             }
-            Err(e) => eprintln!("Lexical error: {e}"),
-        },
+            let (ast, parser_errors) = parser::parse_with_errors(tokens);
+            if !parser_errors.is_empty() {
+                eprintln!("Parser error: {parser_errors:?}");
+                return true;
+            }
+            let result = runtime::eval::eval_with_env(ast, env);
+            match result {
+                Ok(result) | Err(InterpreterError::Return(result)) => println!("=> {result:?}"),
+                _ => return false,
+            }
+        }
     }
     true
 }

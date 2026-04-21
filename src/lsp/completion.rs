@@ -1,4 +1,4 @@
-use crate::lexer::{TokenKind, tokenize};
+use crate::lexer::{TokenKind, tokenize, tokenize_with_errors};
 use crate::parser::{StmtKind, parse};
 use tower_lsp_server::ls_types::*;
 
@@ -63,28 +63,27 @@ impl MpCompleter {
             current_line
         };
 
-        if let Ok(tokens) = tokenize(content) {
-            let mut in_function_call = false;
-            let mut last_identifier = None;
+        let tokens = tokenize(content);
+        let mut in_function_call = false;
+        let mut last_identifier = None;
 
-            for token in tokens.iter().rev() {
-                match &token.kind {
-                    TokenKind::Identifier(name) => {
-                        last_identifier = Some(name.clone());
-                        break;
-                    }
-                    TokenKind::LeftParen => {
-                        in_function_call = true;
-                        break;
-                    }
-                    TokenKind::Newline | TokenKind::Semicolon => break,
-                    _ => {}
+        for token in tokens.iter().rev() {
+            match &token.kind {
+                TokenKind::Identifier(name) => {
+                    last_identifier = Some(name.clone());
+                    break;
                 }
+                TokenKind::LeftParen => {
+                    in_function_call = true;
+                    break;
+                }
+                TokenKind::Newline | TokenKind::Semicolon => break,
+                _ => {}
             }
+        }
 
-            if in_function_call && let Some(func_name) = last_identifier {
-                items.extend(self.get_function_argument_completions(&func_name));
-            }
+        if in_function_call && let Some(func_name) = last_identifier {
+            items.extend(self.get_function_argument_completions(&func_name));
         }
 
         let word_start = before_cursor
@@ -99,10 +98,7 @@ impl MpCompleter {
         if current_word.is_empty() || current_word.ends_with(':') || current_word.ends_with('.') {
             items.extend(self.get_keyword_completions());
             items.extend(self.get_builtin_function_completions());
-
-            if let Ok(_tokens) = tokenize(content) {
-                items.extend(self.get_variable_completions(content, position));
-            }
+            items.extend(self.get_variable_completions(content, position));
         } else {
             let current_word_lower = current_word.to_lowercase();
 
@@ -130,12 +126,9 @@ impl MpCompleter {
                     });
                 }
             }
-
-            if let Ok(_tokens) = tokenize(content) {
-                for item in self.get_variable_completions(content, position) {
-                    if item.label.to_lowercase().starts_with(&current_word_lower) {
-                        items.push(item);
-                    }
+            for item in self.get_variable_completions(content, position) {
+                if item.label.to_lowercase().starts_with(&current_word_lower) {
+                    items.push(item);
                 }
             }
         }
@@ -190,20 +183,22 @@ impl MpCompleter {
         let mut variables: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
-        if let Ok(tokens) = tokenize(content) {
-            let ast = parse(tokens.clone());
-            for stmt in &ast {
-                match &stmt.kind {
-                    StmtKind::Let { name, value, .. } => {
-                        let var_type = self.infer_type(value);
-                        variables.insert(name.clone(), var_type);
-                    }
-                    StmtKind::Function { name, params, .. } => {
-                        let params_str = params.join(", ");
-                        variables.insert(name.clone(), format!("fn({})", params_str));
-                    }
-                    _ => {}
+        let (tokens, errors) = tokenize_with_errors(content);
+        if !errors.is_empty() {
+            return items;
+        }
+        let ast = parse(tokens.clone());
+        for stmt in &ast {
+            match &stmt.kind {
+                StmtKind::Let { name, value, .. } => {
+                    let var_type = self.infer_type(&value);
+                    variables.insert(name.clone(), var_type);
                 }
+                StmtKind::Function { name, params, .. } => {
+                    let params_str = params.join(", ");
+                    variables.insert(name.clone(), format!("fn({})", params_str));
+                }
+                _ => {}
             }
 
             let mut iter = tokens.iter().peekable();

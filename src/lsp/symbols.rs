@@ -19,14 +19,11 @@ impl MpSymbols {
 
     pub fn symbols(&self, content: &str) -> Vec<DocumentSymbol> {
         let mut symbols = Vec::new();
-
-        if let Ok(tokens) = tokenize(content) {
-            let ast = parse(tokens.clone());
-            for stmt in ast {
-                self.extract_symbol_from_stmt(&stmt, &tokens, &mut symbols);
-            }
+        let tokens = tokenize(content);
+        let ast = parse(tokens.clone());
+        for stmt in ast {
+            self.extract_symbol_from_stmt(&stmt, &tokens, &mut symbols);
         }
-
         symbols
     }
 

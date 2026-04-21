@@ -1,4 +1,4 @@
-use crate::lexer::{TokenKind, tokenize};
+use crate::lexer::{TokenKind, tokenize_with_errors};
 use crate::parser::{Stmt, StmtKind, parse};
 use std::str::FromStr;
 use tower_lsp_server::ls_types::*;
@@ -23,7 +23,11 @@ impl MpDefinition {
         position: Position,
         uri: &str,
     ) -> Option<GotoDefinitionResponse> {
-        let tokens = tokenize(content).ok()?;
+        let (tokens, errors) = tokenize_with_errors(content);
+
+        if !errors.is_empty() {
+            return None;
+        }
 
         let line = position.line as usize + 1;
         let col = position.character as usize + 1;
@@ -102,7 +106,11 @@ impl MpDefinition {
         position: Position,
         uri: &str,
     ) -> Option<Vec<Location>> {
-        let tokens = tokenize(content).ok()?;
+        let (tokens, errors) = tokenize_with_errors(content);
+
+        if !errors.is_empty() {
+            return None;
+        }
 
         let line = position.line as usize + 1;
         let col = position.character as usize + 1;

@@ -1,4 +1,4 @@
-use crate::lexer::{TokenKind, tokenize};
+use crate::lexer::{TokenKind, tokenize, tokenize_with_errors};
 use crate::lsp::diagnostics::MpDiagnostics;
 use crate::parser::{StmtKind, parse};
 use std::collections::HashMap;
@@ -29,10 +29,10 @@ impl MpInlayHints {
             .map(|vt| (vt.name, vt.var_type))
             .collect();
 
-        let tokens = match tokenize(content) {
-            Ok(tokens) => tokens,
-            Err(_) => return hints,
-        };
+        let (tokens, errors) = tokenize_with_errors(content);
+        if !errors.is_empty() {
+            return hints;
+        }
 
         let ast = parse(tokens);
 
@@ -204,7 +204,7 @@ impl MpInlayHints {
         content: &str,
         line: usize,
     ) -> Option<crate::lexer::Token> {
-        let tokens = tokenize(content).ok()?;
+        let tokens = tokenize(content);
 
         for token in &tokens {
             if let TokenKind::Identifier(id) = &token.kind

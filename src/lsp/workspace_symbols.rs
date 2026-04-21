@@ -1,4 +1,4 @@
-use crate::lexer::tokenize;
+use crate::lexer::tokenize_with_errors;
 use crate::parser::{Stmt, StmtKind, parse};
 use std::str::FromStr;
 use tower_lsp_server::ls_types::*;
@@ -20,18 +20,15 @@ impl MpWorkspaceSymbols {
     pub fn workspace_symbols(&self, query: &str, uri: &str) -> Vec<SymbolInformation> {
         let mut symbols = Vec::new();
         let query_lower = query.to_lowercase();
-
-        if let Ok(tokens) = tokenize(query) {
-            let ast = parse(tokens);
-            for stmt in ast {
-                if let Some(info) = self.extract_symbol(&stmt, uri)
-                    && (query.is_empty() || info.name.to_lowercase().contains(&query_lower))
-                {
-                    symbols.push(info);
-                }
+        let (tokens, _) = tokenize_with_errors(query);
+        let ast = parse(tokens);
+        for stmt in ast {
+            if let Some(info) = self.extract_symbol(&stmt, uri)
+                && (query.is_empty() || info.name.to_lowercase().contains(&query_lower))
+            {
+                symbols.push(info);
             }
         }
-
         symbols
     }
 
