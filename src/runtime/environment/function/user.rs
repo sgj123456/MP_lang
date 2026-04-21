@@ -25,7 +25,7 @@ impl Fun for UserFunction {
         let env = Rc::new(RefCell::new(Environment::new_child(parent.clone())));
 
         for (param, arg) in self.params.iter().zip(args) {
-            env.borrow_mut().define(param.to_string(), arg);
+            env.borrow_mut().define(param.to_string(), arg)?;
         }
 
         match eval_expr(&self.body, &env) {

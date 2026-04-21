@@ -84,8 +84,12 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: String, value: Value) {
+    pub fn define(&mut self, name: String, value: Value) -> Result<(), InterpreterError> {
+        if self.locals.contains_key(&name) {
+            return Err(InterpreterError::RedefinedVariable(name));
+        }
         self.locals.insert(name, EnvironmentValue::Variable(value));
+        Ok(())
     }
 
     pub fn assign(&mut self, name: &str, value: Value) -> Result<(), InterpreterError> {
@@ -96,15 +100,20 @@ impl Environment {
         } else if let Some(parent) = &self.parent {
             parent.borrow_mut().assign(name, value)
         } else {
-            Err(InterpreterError::UndefinedVariable(name.to_string()))
+            self.locals.insert(name.to_string(), EnvironmentValue::Variable(value));
+            Ok(())
         }
     }
 
-    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Expr) {
+    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Expr) -> Result<(), InterpreterError> {
+        if self.locals.contains_key(&name) {
+            return Err(InterpreterError::RedefinedVariable(name));
+        }
         self.locals.insert(
             name,
             EnvironmentValue::Function(Function::User(UserFunction { params, body })),
         );
+        Ok(())
     }
 
     pub fn get_value(&self, name: &str) -> Option<Value> {

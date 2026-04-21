@@ -38,12 +38,12 @@ pub fn eval_stmt(stmt: &Stmt, env: &Rc<RefCell<Environment>>) -> Result<Value, I
         }
         StmtKind::Let { name, value } => {
             let value = eval_expr(value, env)?;
-            env.borrow_mut().define(name.clone(), value);
+            env.borrow_mut().define(name.clone(), value)?;
             Ok(Value::Nil)
         }
         StmtKind::Function { name, params, body } => {
             env.borrow_mut()
-                .define_function(name.clone(), params.clone(), body.clone());
+                .define_function(name.clone(), params.clone(), body.clone())?;
             Ok(Value::Nil)
         }
         StmtKind::Break => Err(InterpreterError::Break),
@@ -219,13 +219,14 @@ pub fn eval_expr(expr: &Expr, env: &Rc<RefCell<Environment>>) -> Result<Value, I
             }
         }
         ExprKind::Block(statements) => {
+            let block_env = Rc::new(RefCell::new(Environment::new_child(env.clone())));
             let mut result = Value::Nil;
             for stmt in statements {
                 let stmt = Stmt {
                     kind: stmt.clone(),
                     span: crate::lexer::Span { line: 0, column: 0 },
                 };
-                result = eval_stmt(&stmt, env)?;
+                result = eval_stmt(&stmt, &block_env)?;
             }
             Ok(result)
         }

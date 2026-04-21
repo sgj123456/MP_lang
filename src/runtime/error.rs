@@ -8,6 +8,7 @@ impl Error for InterpreterError {}
 #[derive(Debug)]
 pub enum InterpreterError {
     UndefinedVariable(String),
+    RedefinedVariable(String),
     InvalidOperation(String),
     TypeMismatch(String),
     UnsupportedExpression(String),
@@ -24,6 +25,7 @@ impl fmt::Display for InterpreterError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             InterpreterError::UndefinedVariable(name) => write!(f, "Undefined variable: {name}"),
+            InterpreterError::RedefinedVariable(name) => write!(f, "Redefined variable: {name}"),
             InterpreterError::InvalidOperation(op) => write!(f, "Invalid operation: {op}"),
             InterpreterError::TypeMismatch(message) => write!(f, "Type mismatch: {message}"),
             InterpreterError::UnsupportedExpression(expression) => {

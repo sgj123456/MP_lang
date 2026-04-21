@@ -185,8 +185,8 @@ impl TypeAnalyzer {
         TypeInfo::from_expr(expr)
     }
 
-    pub fn get_variable_type(&self, name: &str) -> Option<TypeInfo> {
-        self.variables.get(name).cloned()
+    pub fn get_variable_type(&self, name: &str) -> TypeInfo {
+        self.variables.get(name).cloned().unwrap_or(TypeInfo::Nil)
     }
 
     pub fn get_function_info(&self, name: &str) -> Option<(Vec<String>, TypeInfo)> {
