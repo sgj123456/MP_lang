@@ -96,10 +96,7 @@ impl Environment {
         } else if let Some(parent) = &self.parent {
             parent.borrow_mut().assign(name, value)
         } else {
-            // If variable doesn't exist anywhere, define it in the global (root) environment
-            self.locals
-                .insert(name.to_string(), EnvironmentValue::Variable(value));
-            Ok(())
+            Err(InterpreterError::UndefinedVariable(name.to_string()))
         }
     }
 
