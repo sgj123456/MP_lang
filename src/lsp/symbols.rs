@@ -78,13 +78,7 @@ impl MpSymbols {
                 let range = self.find_token_range(name, tokens);
                 let detail = fields
                     .iter()
-                    .map(|(f, d)| {
-                        if d.is_some() {
-                            f.clone()
-                        } else {
-                            f.clone()
-                        }
-                    })
+                    .map(|(f, _)| f.clone())
                     .collect::<Vec<_>>()
                     .join(", ");
                 #[allow(deprecated)]

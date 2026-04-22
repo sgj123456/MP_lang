@@ -1,4 +1,5 @@
 use crate::lexer::{Span, tokenize_with_errors};
+use crate::lsp::shared::{get_builtin_return_type, is_builtin_function};
 use crate::parser::{Expr, ExprKind, Stmt, StmtKind, parse_with_errors};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -34,24 +35,21 @@ impl MpDiagnostics {
     pub fn analyze(&self, content: &str) -> (Vec<Diagnostic>, Vec<VariableType>) {
         let mut diagnostics = Vec::new();
 
-        let (tokens, errors) = tokenize_with_errors(content);
+        let (tokens, lexer_errors) = tokenize_with_errors(content);
 
-        if !errors.is_empty() {
-            for e in errors {
-                diagnostics.push(Diagnostic {
-                    range: self.span_to_range(&e.span()),
-                    severity: Some(DiagnosticSeverity::ERROR),
-                    code: Some(NumberOrString::String("MP001".to_string())),
-                    source: Some("mp-lang".to_string()),
-                    message: format!("Lexer error: {}", e.message()),
-                    ..Default::default()
-                });
-                return (diagnostics, Vec::new());
-            }
-        };
+        for e in lexer_errors {
+            diagnostics.push(Diagnostic {
+                range: self.span_to_range(&e.span()),
+                severity: Some(DiagnosticSeverity::ERROR),
+                code: Some(NumberOrString::String("MP001".to_string())),
+                source: Some("mp-lang".to_string()),
+                message: format!("Lexer error: {}", e.message()),
+                ..Default::default()
+            });
+        }
 
-        let (_, errors) = parse_with_errors(tokens);
-        for e in &errors {
+        let (_, parser_errors) = parse_with_errors(tokens);
+        for e in &parser_errors {
             diagnostics.push(Diagnostic {
                 range: self.span_to_range(&e.span()),
                 severity: Some(DiagnosticSeverity::ERROR),
@@ -76,11 +74,11 @@ impl MpDiagnostics {
     fn span_to_range(&self, span: &Span) -> Range {
         Range {
             start: Position {
-                line: (span.line.saturating_sub(1)) as u32,
-                character: (span.column.saturating_sub(1)) as u32,
+                line: span.line.saturating_sub(1) as u32,
+                character: span.column.saturating_sub(1) as u32,
             },
             end: Position {
-                line: (span.line.saturating_sub(1)) as u32,
+                line: span.line.saturating_sub(1) as u32,
                 character: span.column as u32,
             },
         }
@@ -144,10 +142,10 @@ impl StaticAnalyzer {
     fn analyze(&mut self, content: &str) -> (Vec<Diagnostic>, Vec<VariableType>) {
         let mut diagnostics = Vec::new();
 
-        let (tokens, errors) = tokenize_with_errors(content);
+        let (tokens, lexer_errors) = tokenize_with_errors(content);
 
-        if !errors.is_empty() {
-            for e in errors {
+        if !lexer_errors.is_empty() {
+            for e in lexer_errors {
                 diagnostics.push(Diagnostic {
                     range: self.span_to_range(&e.span()),
                     severity: Some(DiagnosticSeverity::ERROR),
@@ -157,7 +155,6 @@ impl StaticAnalyzer {
                     ..Default::default()
                 });
             }
-            return (diagnostics, Vec::new());
         }
 
         let (ast, _errors) = parse_with_errors(tokens);
@@ -246,8 +243,8 @@ impl StaticAnalyzer {
             Array(_) => "array".to_string(),
             Object(_) => "object".to_string(),
             FunctionCall { name, .. } => {
-                if let Some((_builtin, _)) = BuiltinFunction::from_name(name) {
-                    self.get_builtin_return_type(name)
+                if is_builtin_function(name) {
+                    get_builtin_return_type(name)
                 } else {
                     "function".to_string()
                 }
@@ -277,18 +274,6 @@ impl StaticAnalyzer {
             GetProperty { .. } => "unknown".to_string(),
             UnaryOp { .. } => "unknown".to_string(),
             StructInstance { .. } => "unknown".to_string(),
-        }
-    }
-
-    fn get_builtin_return_type(&self, name: &str) -> String {
-        match name {
-            "print" | "push" | "pop" | "time" => "nil".to_string(),
-            "input" => "string".to_string(),
-            "len" => "int".to_string(),
-            "type" | "str" => "string".to_string(),
-            "int" | "float" => "number".to_string(),
-            "random" => "int".to_string(),
-            _ => "unknown".to_string(),
         }
     }
 
@@ -604,20 +589,18 @@ impl StaticAnalyzer {
             ExprKind::Parenthesized(expr) => {
                 self.check_expr(expr, diagnostics);
             }
-            ExprKind::Number(_)
-            | ExprKind::Boolean(_)
-            | ExprKind::String(_) => {}
+            ExprKind::Number(_) | ExprKind::Boolean(_) | ExprKind::String(_) => {}
         }
     }
 
     fn span_to_range(&self, span: &Span) -> Range {
         Range {
             start: Position {
-                line: (span.line.saturating_sub(1)) as u32,
-                character: (span.column.saturating_sub(1)) as u32,
+                line: span.line.saturating_sub(1) as u32,
+                character: span.column.saturating_sub(1) as u32,
             },
             end: Position {
-                line: (span.line.saturating_sub(1)) as u32,
+                line: span.line.saturating_sub(1) as u32,
                 character: span.column as u32,
             },
         }

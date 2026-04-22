@@ -1,5 +1,5 @@
 struct Student { name, score }
-let students = [{ "name": "Lihua", "score": 100 }, Student("Bob", 82), Student("Charlie", 78), Student("Diana", 91), Student("Eve", 88)];
+let students = [{ "name": "Jack", "score": 100 }, Student("Bob", 82), Student("Charlie", 78), Student("Diana", 91), Student("Eve", 88)];
 fn print_student(student) {
     print("  Name:", student:name, " Score:", student:score)
 }

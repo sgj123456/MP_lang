@@ -1,5 +1,6 @@
 use crate::lexer::{TokenKind, tokenize, tokenize_with_errors};
 use crate::lsp::diagnostics::MpDiagnostics;
+use crate::lsp::shared::{get_builtin_return_type, is_builtin_function};
 use crate::parser::{StmtKind, parse};
 use std::collections::HashMap;
 use tower_lsp_server::ls_types::*;
@@ -234,8 +235,8 @@ impl MpInlayHints {
             Array(_) => "array".to_string(),
             Object(_) => "object".to_string(),
             FunctionCall { name, .. } => {
-                if self.is_builtin_function(name) {
-                    self.get_builtin_return_type(name)
+                if is_builtin_function(name) {
+                    get_builtin_return_type(name)
                 } else {
                     "function".to_string()
                 }
@@ -296,34 +297,5 @@ impl MpInlayHints {
         }
 
         "unknown".to_string()
-    }
-
-    fn is_builtin_function(&self, name: &str) -> bool {
-        matches!(
-            name,
-            "print"
-                | "input"
-                | "len"
-                | "type"
-                | "str"
-                | "int"
-                | "float"
-                | "random"
-                | "push"
-                | "pop"
-                | "time"
-        )
-    }
-
-    fn get_builtin_return_type(&self, name: &str) -> String {
-        match name {
-            "print" | "push" | "pop" | "time" => "nil".to_string(),
-            "input" => "string".to_string(),
-            "len" => "int".to_string(),
-            "type" | "str" => "string".to_string(),
-            "int" | "float" => "number".to_string(),
-            "random" => "int".to_string(),
-            _ => "unknown".to_string(),
-        }
     }
 }

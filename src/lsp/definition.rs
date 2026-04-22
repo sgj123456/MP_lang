@@ -234,10 +234,8 @@ impl MpDefinition {
                 ..
             } => {
                 symbols.entry(name.clone()).or_default().push(SymbolInfo {
-                    _name: name.clone(),
                     line: stmt.span.line,
                     column: stmt.span.column,
-                    _kind: SymbolKind::FUNCTION,
                 });
                 self.extract_symbols_from_expr(body, tokens, symbols);
             }
@@ -245,10 +243,8 @@ impl MpDefinition {
                 name, name_span, ..
             } => {
                 symbols.entry(name.clone()).or_default().push(SymbolInfo {
-                    _name: name.clone(),
                     line: name_span.line,
                     column: name_span.column,
-                    _kind: SymbolKind::VARIABLE,
                 });
             }
             StmtKind::Expr(expr) | StmtKind::Result(expr) => {
@@ -260,10 +256,8 @@ impl MpDefinition {
             StmtKind::Break | StmtKind::Continue | StmtKind::Return(None) => {}
             StmtKind::Struct { name, .. } => {
                 symbols.entry(name.clone()).or_default().push(SymbolInfo {
-                    _name: name.clone(),
                     line: stmt.span.line,
                     column: stmt.span.column,
-                    _kind: SymbolKind::STRUCT,
                 });
             }
         }
@@ -374,8 +368,6 @@ impl MpDefinition {
 
 #[derive(Debug, Clone)]
 struct SymbolInfo {
-    _name: String,
     line: usize,
     column: usize,
-    _kind: SymbolKind,
 }

@@ -192,7 +192,7 @@ impl MpCompleter {
         for stmt in &ast {
             match &stmt.kind {
                 StmtKind::Let { name, value, .. } => {
-                    let var_type = self.infer_type(&value);
+                    let var_type = self.infer_type(value);
                     variables.insert(name.clone(), var_type);
                 }
                 StmtKind::Function { name, params, .. } => {
@@ -200,11 +200,11 @@ impl MpCompleter {
                     variables.insert(name.clone(), format!("fn({})", params_str));
                 }
                 StmtKind::Struct { name, fields } => {
-                    let fields_str: Vec<String> = fields
-                        .iter()
-                        .map(|(f, _)| f.clone())
-                        .collect();
-                    variables.insert(name.clone(), format!("struct {{ {} }}", fields_str.join(", ")));
+                    let fields_str: Vec<String> = fields.iter().map(|(f, _)| f.clone()).collect();
+                    variables.insert(
+                        name.clone(),
+                        format!("struct {{ {} }}", fields_str.join(", ")),
+                    );
                 }
                 _ => {}
             }

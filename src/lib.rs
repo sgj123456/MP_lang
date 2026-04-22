@@ -77,7 +77,7 @@ struct InputValidator {
     #[rustyline(Validator)]
     brackets: MatchingBracketValidator,
     #[rustyline(Highlighter)]
-    hightlighter: MatchingBracketHighlighter,
+    highlighter: MatchingBracketHighlighter,
 }
 
 pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
@@ -86,7 +86,7 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl: Editor<InputValidator, FileHistory> = Editor::with_config(config)?;
     rl.set_helper(Some(InputValidator {
         brackets: MatchingBracketValidator::new(),
-        hightlighter: MatchingBracketHighlighter::new(),
+        highlighter: MatchingBracketHighlighter::new(),
     }));
     let env = Rc::new(RefCell::new(Environment::new_root()));
 

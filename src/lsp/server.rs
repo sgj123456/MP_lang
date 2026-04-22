@@ -12,7 +12,6 @@ use crate::lsp::diagnostics::MpDiagnostics;
 use crate::lsp::hover::MpHover;
 use crate::lsp::inlay_hint::MpInlayHints;
 use crate::lsp::symbols::MpSymbols;
-use crate::lsp::workspace_symbols::MpWorkspaceSymbols;
 
 #[derive(Debug)]
 pub struct MpLanguageServer {
@@ -25,8 +24,6 @@ pub struct MpLanguageServer {
     inlay_hints: MpInlayHints,
     symbols: MpSymbols,
     definition: MpDefinition,
-    #[allow(dead_code)]
-    workspace_symbols: MpWorkspaceSymbols,
 }
 
 impl MpLanguageServer {
@@ -40,7 +37,6 @@ impl MpLanguageServer {
             inlay_hints: MpInlayHints::new(),
             symbols: MpSymbols::new(),
             definition: MpDefinition::new(),
-            workspace_symbols: MpWorkspaceSymbols::new(),
         }
     }
 }
